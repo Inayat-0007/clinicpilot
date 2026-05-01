@@ -15,6 +15,59 @@ const navItems = [
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
+const Sidebar = ({ mobile = false, pathname, setMobileOpen, handleLogout }) => (
+  <aside
+    className={
+      mobile
+        ? "fixed inset-0 z-50 bg-white flex flex-col w-72 shadow-2xl"
+        : "w-64 bg-white border-r hidden md:flex flex-col"
+    }
+  >
+    <div className="h-16 flex items-center justify-between px-6 border-b">
+      <span className="font-bold text-xl text-blue-600">ClinicPilot</span>
+      {mobile && (
+        <button
+          onClick={() => setMobileOpen(false)}
+          className="text-gray-500 hover:text-gray-800"
+          aria-label="Close menu"
+        >
+          <X className="w-6 h-6" />
+        </button>
+      )}
+    </div>
+    <nav className="flex-1 py-4 flex flex-col gap-1 px-3">
+      {navItems.map(({ href, label, icon: Icon }) => {
+        const isActive = pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
+        return (
+          <Link
+            key={href}
+            href={href}
+            onClick={() => setMobileOpen(false)}
+            className={`flex items-center gap-3 px-3 py-2 rounded-md font-medium transition-colors ${
+              isActive
+                ? "bg-blue-50 text-blue-700"
+                : "text-gray-700 hover:bg-gray-100"
+            }`}
+          >
+            <Icon className="w-5 h-5" />
+            {label}
+          </Link>
+        );
+      })}
+    </nav>
+    <div className="p-4 border-t">
+      {/* FIX #5: onClick handler added — was missing, causing logout to do nothing */}
+      <Button
+        variant="ghost"
+        className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+        onClick={handleLogout}
+      >
+        <LogOut className="w-5 h-5 mr-3" /> Logout
+      </Button>
+    </div>
+  </aside>
+);
+
 export default function DashboardLayout({ children }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -40,63 +93,10 @@ export default function DashboardLayout({ children }) {
     }
   };
 
-  const Sidebar = ({ mobile = false }) => (
-    <aside
-      className={
-        mobile
-          ? "fixed inset-0 z-50 bg-white flex flex-col w-72 shadow-2xl"
-          : "w-64 bg-white border-r hidden md:flex flex-col"
-      }
-    >
-      <div className="h-16 flex items-center justify-between px-6 border-b">
-        <span className="font-bold text-xl text-blue-600">ClinicPilot</span>
-        {mobile && (
-          <button
-            onClick={() => setMobileOpen(false)}
-            className="text-gray-500 hover:text-gray-800"
-            aria-label="Close menu"
-          >
-            <X className="w-6 h-6" />
-          </button>
-        )}
-      </div>
-      <nav className="flex-1 py-4 flex flex-col gap-1 px-3">
-        {navItems.map(({ href, label, icon: Icon }) => {
-          const isActive = pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
-          return (
-            <Link
-              key={href}
-              href={href}
-              onClick={() => setMobileOpen(false)}
-              className={`flex items-center gap-3 px-3 py-2 rounded-md font-medium transition-colors ${
-                isActive
-                  ? "bg-blue-50 text-blue-700"
-                  : "text-gray-700 hover:bg-gray-100"
-              }`}
-            >
-              <Icon className="w-5 h-5" />
-              {label}
-            </Link>
-          );
-        })}
-      </nav>
-      <div className="p-4 border-t">
-        {/* FIX #5: onClick handler added — was missing, causing logout to do nothing */}
-        <Button
-          variant="ghost"
-          className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
-          onClick={handleLogout}
-        >
-          <LogOut className="w-5 h-5 mr-3" /> Logout
-        </Button>
-      </div>
-    </aside>
-  );
-
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
       {/* Desktop sidebar */}
-      <Sidebar />
+      <Sidebar pathname={pathname} setMobileOpen={setMobileOpen} handleLogout={handleLogout} />
 
       {/* FIX #28: Mobile sidebar overlay */}
       {mobileOpen && (
@@ -107,7 +107,7 @@ export default function DashboardLayout({ children }) {
             onClick={() => setMobileOpen(false)}
             aria-hidden="true"
           />
-          <Sidebar mobile />
+          <Sidebar mobile pathname={pathname} setMobileOpen={setMobileOpen} handleLogout={handleLogout} />
         </>
       )}
 

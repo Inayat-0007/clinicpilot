@@ -58,6 +58,7 @@ export default function ReschedulePage() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (token) fetchApt();
   }, [token, fetchApt]);
 
@@ -68,6 +69,7 @@ export default function ReschedulePage() {
     // In src/app/api/public/reschedule/route.js, the GET returns clinics(name). 
     // I need to add slug there!
     if (appointment?.clinics?.slug) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchSlots(selectedDate, appointment.clinics.slug);
     }
   }, [appointment, selectedDate, fetchSlots]);

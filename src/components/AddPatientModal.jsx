@@ -76,15 +76,17 @@ export function AddPatientModal({ onPatientAdded }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button className="shrink-0" />}>
-        <UserPlus className="w-4 h-4 mr-2" /> Add Patient
+      <DialogTrigger asChild>
+        <Button className="shrink-0">
+          <UserPlus className="w-4 h-4 mr-2" /> Add Patient
+        </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Add New Patient</DialogTitle>
             <DialogDescription>
-              Enter the patient's details below to add them to your directory.
+              <p className="text-slate-500 text-sm">Please fill in the patient&apos;s details below to add them to your directory.</p>
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">

@@ -29,12 +29,6 @@ export function AddBookingModal({ onBookingAdded }) {
 
   const supabase = createClient();
 
-  useEffect(() => {
-    if (open) {
-      fetchData();
-    }
-  }, [open]);
-
   const fetchData = async () => {
     setFetching(true);
     try {
@@ -62,6 +56,14 @@ export function AddBookingModal({ onBookingAdded }) {
       setFetching(false);
     }
   };
+
+  useEffect(() => {
+    if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      fetchData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -127,8 +129,8 @@ export function AddBookingModal({ onBookingAdded }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button size="sm" />}>
-        New Booking
+      <DialogTrigger asChild>
+        <Button size="sm">New Booking</Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <form onSubmit={handleSubmit}>

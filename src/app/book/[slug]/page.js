@@ -67,11 +67,13 @@ export default function BookingPage() {
   }, [slug]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (slug) fetchClinic();
   }, [slug, fetchClinic]);
 
   useEffect(() => {
     if (selectedDoctor && step === 1) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchSlots(selectedDate, selectedDoctor.id);
     }
   }, [selectedDoctor, selectedDate, step, fetchSlots]);

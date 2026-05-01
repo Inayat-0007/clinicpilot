@@ -102,7 +102,7 @@ export default async function AnalyticsPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-slate-900">Analytics</h1>
         <p className="text-slate-500 mt-2">
-          Track your clinic's performance, no-show rates, and revenue.
+          Track your clinic&apos;s performance, no-show rates, and revenue.
         </p>
       </div>
 
