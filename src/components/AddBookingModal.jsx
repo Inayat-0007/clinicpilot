@@ -134,7 +134,7 @@ export function AddBookingModal({ onBookingAdded }) {
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Book Appointment</DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-slate-500 text-sm">
               Schedule a new appointment for an existing patient.
             </DialogDescription>
           </DialogHeader>

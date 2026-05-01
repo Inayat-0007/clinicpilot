@@ -88,8 +88,8 @@ export function AddPatientModal({ onPatientAdded }) {
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Add New Patient</DialogTitle>
-            <DialogDescription>
-              <p className="text-slate-500 text-sm">Please fill in the patient&apos;s details below to add them to your directory.</p>
+            <DialogDescription className="text-slate-500 text-sm">
+              Please fill in the patient&apos;s details below to add them to your directory.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">

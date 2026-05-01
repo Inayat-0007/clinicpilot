@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { createClient } from "@/lib/supabase/client";
 import { Loader2 } from "lucide-react";
 
@@ -23,6 +24,12 @@ export default function SettingsPage() {
 
   // Templates State
   const [templates, setTemplates] = useState([]);
+
+  // Add Member State
+  const [isAddDoctorOpen, setIsAddDoctorOpen] = useState(false);
+  const [newDoctorName, setNewDoctorName] = useState("");
+  const [newDoctorSpec, setNewDoctorSpec] = useState("");
+  const [addingDoctor, setAddingDoctor] = useState(false);
 
   const supabase = createClient();
 
@@ -74,21 +81,21 @@ export default function SettingsPage() {
       .eq('doctor_id', doctorId)
       .order('day_of_week');
     
-    if (!error && data) {
-      // Pad missing days
-      const allDays = [0,1,2,3,4,5,6].map(day => {
-        const existing = data.find(d => d.day_of_week === day);
-        return existing || {
-          doctor_id: doctorId,
-          day_of_week: day,
-          start_time: '09:00:00',
-          end_time: '17:00:00',
-          is_available: false,
-          isNew: true
-        };
-      });
-      setWorkingHours(allDays);
-    }
+    const existingData = (!error && data) ? data : [];
+    
+    // Pad missing days
+    const allDays = [0,1,2,3,4,5,6].map(day => {
+      const existing = existingData.find(d => d.day_of_week === day);
+      return existing || {
+        doctor_id: doctorId,
+        day_of_week: day,
+        start_time: '09:00:00',
+        end_time: '17:00:00',
+        is_available: false,
+        isNew: true
+      };
+    });
+    setWorkingHours(allDays);
   };
 
   useEffect(() => {
@@ -164,6 +171,45 @@ export default function SettingsPage() {
       toast.error("Failed to save working hours");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleAddDoctor = async (e) => {
+    e.preventDefault();
+    if (!newDoctorName.trim()) return;
+    
+    setAddingDoctor(true);
+    try {
+      const { data: clinicId } = await supabase.rpc('get_my_clinic_id');
+      if (!clinicId) throw new Error("Could not find clinic ID");
+
+      const { data, error } = await supabase
+        .from('doctors')
+        .insert([{
+          clinic_id: clinicId,
+          name: newDoctorName.trim(),
+          specialization: newDoctorSpec.trim() || 'General'
+        }])
+        .select()
+        .single();
+        
+      if (error) throw error;
+      
+      toast.success("Doctor added successfully");
+      setDoctors([...doctors, data]);
+      
+      if (!selectedDoctor) {
+        setSelectedDoctor(data.id);
+        fetchWorkingHours(data.id);
+      }
+      
+      setNewDoctorName("");
+      setNewDoctorSpec("");
+      setIsAddDoctorOpen(false);
+    } catch (err) {
+      toast.error(err.message || "Failed to add doctor");
+    } finally {
+      setAddingDoctor(false);
     }
   };
 
@@ -471,7 +517,46 @@ export default function SettingsPage() {
                   <CardTitle>Team & Doctors</CardTitle>
                   <CardDescription>Manage staff access and doctor profiles.</CardDescription>
                 </div>
-                <Button size="sm">Add Member</Button>
+                <Dialog open={isAddDoctorOpen} onOpenChange={setIsAddDoctorOpen}>
+                  <DialogTrigger render={<Button size="sm">Add Member</Button>} />
+                  <DialogContent className="sm:max-w-[425px]">
+                    <form onSubmit={handleAddDoctor}>
+                      <DialogHeader>
+                        <DialogTitle>Add Doctor</DialogTitle>
+                        <DialogDescription className="text-slate-500 text-sm">
+                          Add a new doctor or staff member to your clinic.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="grid gap-4 py-4">
+                        <div className="grid gap-2">
+                          <Label htmlFor="doc_name">Doctor Name *</Label>
+                          <Input 
+                            id="doc_name" 
+                            value={newDoctorName} 
+                            onChange={(e) => setNewDoctorName(e.target.value)} 
+                            placeholder="Dr. John Doe" 
+                            required 
+                          />
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="doc_spec">Specialization</Label>
+                          <Input 
+                            id="doc_spec" 
+                            value={newDoctorSpec} 
+                            onChange={(e) => setNewDoctorSpec(e.target.value)} 
+                            placeholder="e.g. Dentist, General Physician" 
+                          />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button type="submit" disabled={addingDoctor} className="w-full">
+                          {addingDoctor && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          Save Doctor
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </DialogContent>
+                </Dialog>
               </div>
             </CardHeader>
             <CardContent>
