@@ -23,7 +23,7 @@ jobs:
       # FIX #27: Removed '|| true' — CI must fail on TypeScript errors, lint errors, and vulnerabilities.
       # Previously these steps always passed regardless of errors, giving false confidence.
       - run: npx tsc --noEmit
-      - run: npx next lint
+      - run: npm run lint
       - run: npm audit --audit-level=high
       - run: npm run build
         env:
