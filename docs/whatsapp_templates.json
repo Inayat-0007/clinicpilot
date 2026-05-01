@@ -1,0 +1,23 @@
+[
+  {
+    "name": "appointment_confirmation",
+    "category": "UTILITY",
+    "language": "en",
+    "body": "Hello {{1}}, your appointment at {{2}} is confirmed for {{3}} at {{4}}. Reply 1 to Reschedule.",
+    "example_values": ["Rahul", "City Care Clinic", "Oct 25", "10:00 AM"]
+  },
+  {
+    "name": "reminder_24h",
+    "category": "UTILITY",
+    "language": "en",
+    "body": "Hi {{1}}, this is a reminder for your appointment tomorrow at {{2}} with {{3}}. To reschedule instantly, click here: {{4}}",
+    "example_values": ["Rahul", "10:00 AM", "City Care Clinic", "https://clinicpilot.com/reschedule/abc123xyz"]
+  },
+  {
+    "name": "reminder_2h",
+    "category": "UTILITY",
+    "language": "en",
+    "body": "Hi {{1}}, your appointment is in 2 hours ({{2}}). Please arrive 5 minutes early. See you soon!",
+    "example_values": ["Rahul", "10:00 AM"]
+  }
+]

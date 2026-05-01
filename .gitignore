@@ -1,0 +1,58 @@
+# ═══════════════════════════════════════════════════════════════════
+# ClinicPilot — .gitignore
+# ═══════════════════════════════════════════════════════════════════
+
+# ── Dependencies ─────────────────────────────────────────────────
+node_modules/
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# ── Build output ─────────────────────────────────────────────────
+.next/
+out/
+build/
+dist/
+
+# ── Environment & secrets ───────────────────────────────────────
+# .env.example is safe to commit (no secrets).
+# Everything else with .env* is ignored.
+.env
+.env.local
+.env.*.local
+
+# ── IDE & OS ─────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── Debug logs ───────────────────────────────────────────────────
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ── Test coverage ────────────────────────────────────────────────
+coverage/
+
+# ── Deployment ───────────────────────────────────────────────────
+.vercel
+
+# ── TypeScript ───────────────────────────────────────────────────
+*.tsbuildinfo
+next-env.d.ts
+
+# ── Supabase local ──────────────────────────────────────────────
+supabase/.temp/
+
+# ── Certificates & keys ─────────────────────────────────────────
+*.pem
+*.key
+*.cert
