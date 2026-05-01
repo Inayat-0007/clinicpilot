@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar, Users, BarChart3, Settings, LogOut, Menu, X, Link2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
