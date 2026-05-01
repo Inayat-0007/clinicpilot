@@ -1,207 +1,111 @@
-# ClinicPilot
+# 🏥 ClinicPilot: The No-Show Killer for Modern Clinics
 
-> **Automated patient no-show prevention for Indian clinics.**
-> WhatsApp reminders · 1-click rescheduling · real-time analytics
+[![Production Status](https://img.shields.io/badge/Status-Production--Ready-success?style=for-the-badge)](https://clinicpilot.in)
+[![Next.js 16](https://img.shields.io/badge/Framework-Next.js%2016-black?style=for-the-badge&logo=next.js)](https://nextjs.org)
+[![Supabase](https://img.shields.io/badge/Backend-Supabase-3ECF8E?style=for-the-badge&logo=supabase)](https://supabase.com)
+[![WhatsApp Automation](https://img.shields.io/badge/Automation-WhatsApp-25D366?style=for-the-badge&logo=whatsapp)](https://developers.facebook.com/docs/whatsapp/cloud-api)
 
-[![CI](https://github.com/YOUR_USERNAME/clinicpilot/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_USERNAME/clinicpilot/actions)
-[![Next.js](https://img.shields.io/badge/Next.js-16.2-black)](https://nextjs.org)
-[![Supabase](https://img.shields.io/badge/Supabase-Postgres-3ECF8E)](https://supabase.com)
-[![License](https://img.shields.io/badge/License-Proprietary-red)](#license)
-
----
-
-## Overview
-
-ClinicPilot is a multi-tenant SaaS platform that automates appointment
-reminders via **WhatsApp** (with SMS fallback) and provides patients a
-**1-click reschedule** link — reducing no-shows by up to 40%.
-
-**Key differentiators** from competitors (Practo, Eka.Care):
-
-| Feature               | Practo  | Eka.Care | ClinicPilot |
-| --------------------- | ------- | -------- | ----------- |
-| Native WhatsApp       | ❌       | ⚠️       | ✅           |
-| 1-Click Reschedule    | ❌       | ❌        | ✅           |
-| No-Show Analytics     | ❌       | ❌        | ✅           |
-| Starting Price        | ₹2,500  | ₹1,416   | **₹749**    |
+### **Stop Losing Revenue to Empty Chairs.**
+ClinicPilot is a premium, full-stack patient engagement platform designed to eliminate no-shows using native WhatsApp automation, seamless 1-click rescheduling, and actionable intelligence. Built for the high-velocity Indian healthcare market.
 
 ---
 
-## Tech Stack
+## 🚀 The Value Proposition
 
-| Layer         | Technology                            |
-| ------------- | ------------------------------------- |
-| Framework     | Next.js 16 (App Router, Turbopack)    |
-| Database      | Supabase (PostgreSQL + RLS)           |
-| Auth          | Supabase Auth (SSR cookie-based)      |
-| UI            | Tailwind CSS 4 + shadcn/ui + Radix    |
-| Animations    | Framer Motion                         |
-| WhatsApp      | Meta Cloud API (direct, no BSP)       |
-| SMS Fallback  | Twilio                                |
-| Payments      | Razorpay Subscriptions (UPI AutoPay)  |
-| Hosting       | Vercel (Edge)                         |
-| CI/CD         | GitHub Actions → Vercel               |
-| Scheduling    | pg_cron + Supabase Edge Functions     |
+| Feature | The Status Quo (Practo/Eka) | **ClinicPilot Advantage** |
+| :--- | :--- | :--- |
+| **Engagement** | Ignored SMS reminders | **98% Open-rate WhatsApp automation** |
+| **Rescheduling** | Manual calls/Reception friction | **Frictionless 1-click patient self-service** |
+| **Analytics** | Static lists of names | **Real-time "Revenue Saved" tracking** |
+| **Cost** | ₹1,500 - ₹2,500 / month | **Starting at ₹749 / month** |
 
 ---
 
-## Project Structure
+## ✨ Core Features
 
-```
-clinicpilot/
-├── .env.local                        # Environment variables (secrets)
-├── .env.example                      # Template for env vars (safe to commit)
-├── .github/workflows/ci.yml         # CI/CD pipeline
-├── next.config.mjs                   # Next.js config + security headers
-├── package.json                      # Dependencies & scripts
-│
-├── docs/                             # Project documentation
-│   ├── ARCHITECTURE.md               # System design & data flow
-│   ├── DEPLOYMENT.md                 # Vercel deployment guide
-│   └── CONTRIBUTING.md               # Code standards & PR process
-│
-├── public/                           # Static assets
-│   └── favicon.ico
-│
-├── src/
-│   ├── app/                          # Next.js App Router pages
-│   │   ├── layout.js                 # Root layout (fonts, metadata, Toaster)
-│   │   ├── page.js                   # Landing page (/)
-│   │   ├── login/page.js             # Authentication
-│   │   ├── register/page.js          # Clinic onboarding
-│   │   ├── privacy/page.js           # DPDP Act privacy policy
-│   │   ├── error.js                  # App-level error boundary
-│   │   ├── global-error.js           # Root error boundary
-│   │   │
-│   │   ├── dashboard/                # Auth-protected admin area
-│   │   │   ├── layout.js             # Sidebar navigation shell
-│   │   │   ├── page.js               # Live metrics & today's schedule
-│   │   │   ├── patients/page.js      # Patient directory & search
-│   │   │   ├── settings/page.js      # Clinic profile, hours, templates
-│   │   │   └── error.js              # Dashboard error boundary
-│   │   │
-│   │   ├── book/[slug]/page.js       # Public patient booking wizard
-│   │   ├── reschedule/[token]/page.js # 1-click reschedule (from WhatsApp)
-│   │   │
-│   │   └── api/                      # Backend API routes
-│   │       ├── health/route.js       # Health check (CI/CD probe)
-│   │       ├── appointments/route.js # Admin booking (auth-protected)
-│   │       ├── public/               # Unauthenticated patient endpoints
-│   │       │   ├── book/route.js
-│   │       │   └── reschedule/route.js
-│   │       ├── whatsapp/send/route.js # Meta Cloud API sender
-│   │       ├── payment/
-│   │       │   ├── create-subscription/route.js
-│   │       │   └── webhook/route.js  # Razorpay webhook (HMAC verified)
-│   │       └── webhooks/
-│   │           ├── razorpay/route.js
-│   │           ├── whatsapp/route.js # Meta webhook (SHA-256 verified)
-│   │           └── twilio/route.js
-│   │
-│   ├── components/ui/                # shadcn/ui primitives
-│   │
-│   ├── lib/                          # Shared utilities & services
-│   │   ├── supabase/
-│   │   │   ├── client.js             # Browser client (public, RLS)
-│   │   │   ├── server.js             # SSR client (cookie-based, RLS)
-│   │   │   └── admin.js              # Service-role client (bypasses RLS)
-│   │   ├── csrf.js                   # CSRF origin validation
-│   │   ├── env.js                    # Build-time env validation
-│   │   ├── logger.js                 # Structured JSON logging
-│   │   ├── pii.js                    # PII hashing (DPDP Act)
-│   │   ├── plan.js                   # Subscription plan enforcement
-│   │   ├── ratelimit.js              # Upstash Redis rate limiters
-│   │   ├── retry.js                  # Exponential backoff utility
-│   │   ├── tokens.js                 # Secure token generation
-│   │   ├── utils.js                  # Tailwind cn() merge
-│   │   └── validation.js             # Zod schemas
-│   │
-│   └── middleware.js                 # Rate limiting + auth guard
-│
-└── supabase/
-    ├── config.toml                   # Supabase local config
-    ├── migrations/                   # Ordered SQL migrations
-    │   ├── 001_initial_schema.sql
-    │   ├── 002_pg_cron.sql
-    │   ├── 003_token_expiry.sql
-    │   ├── 004_rls_policies.sql
-    │   ├── 005_idempotency.sql
-    │   ├── 006_pii_handling.sql
-    │   ├── 007_soft_deletes.sql
-    │   └── 008_performance_indexes.sql
-    └── functions/
-        └── send-reminders/index.ts   # Edge Function: reminder engine
+### 📱 Native WhatsApp Automation
+Direct integration with the **Meta Cloud API**. Automatically send booking confirmations, 24-hour reminders, and 2-hour "last call" messages. No third-party BSP markups.
+
+### 📅 Dynamic Slot Engine
+A sophisticated availability calculator that respects doctor working hours, existing appointments, and consultation buffers across multiple practitioners.
+
+### 🔄 1-Click Reschedule Engine
+Patients receive a secure, unique link to move their appointment without calling the clinic. Our system handles the slot conflict validation in real-time.
+
+### 📊 Precision Dashboard
+Track today's schedule, monitor WhatsApp delivery statuses, and see exactly how much revenue was recovered from prevented no-shows.
+
+---
+
+## 🛡️ Production Hardening (Audit Resolved)
+*Current Status: **Stable & Secure*** | *Commit Hash: `32dd306`*
+
+Following a comprehensive 31-point security and architectural audit, ClinicPilot is now fully hardened for production:
+- **🔒 PII Compliance (DPDP Act 2023):** Mandatory phone hashing (HMAC-SHA256) for all audit logs using `PII_SALT`.
+- **🛡️ State-of-the-art Security:** Strict CSRF validation, Row-Level Security (RLS) on all tables, and Upstash Redis rate limiting.
+- **⚡ Performance Optimized:** Next.js 16 App Router with partial unique indexes for booking idempotency.
+- **🔗 Secure Tokens:** Cryptographically secure 48-hour expiring reschedule tokens with one-time-use invalidation.
+
+---
+
+## 🛠️ Technical Architecture
+
+### **The Stack**
+- **Core:** Next.js 16 (App Router + Turbopack)
+- **Database:** Supabase (Postgres + pg_cron)
+- **Real-time:** Supabase Edge Functions (Deno Runtime)
+- **Styling:** Tailwind CSS 4 + shadcn/ui + Framer Motion
+- **Payments:** Razorpay (UPI AutoPay + Webhooks)
+- **Cache/RL:** Upstash Redis
+
+### **Directory Structure**
+```text
+src/
+├── app/                  # Next.js Pages & API (Public/Admin separation)
+├── components/           # High-conversion UI components
+├── lib/                  # Hardened services (Auth, Plan, PII, CSRF)
+└── middleware.js         # Security & Rate-limiting gatekeeper
+supabase/
+├── migrations/           # Versioned schema & security policies
+└── functions/            # Serverless reminder engine
 ```
 
 ---
 
-## Getting Started
+## 🏁 Getting Started
 
-### Prerequisites
-
+### **1. Prerequisites**
 - Node.js ≥ 20
-- npm ≥ 10
-- A [Supabase](https://supabase.com) project (free tier)
-- A [Vercel](https://vercel.com) account (free tier)
+- Supabase Project (Postgres + Auth enabled)
+- Meta WhatsApp Business Account
 
-### 1. Clone & Install
-
+### **2. Installation**
 ```bash
-git clone https://github.com/YOUR_USERNAME/clinicpilot.git
+git clone https://github.com/Inayat-0007/clinicpilot.git
 cd clinicpilot
 npm install
 ```
 
-### 2. Configure Environment
+### **3. Environment Setup**
+Copy `.env.example` to `.env.local` and configure:
+- `PII_SALT`: Unique salt for phone hashing.
+- `WHATSAPP_ACCESS_TOKEN`: Meta Cloud API token.
+- `RAZORPAY_WEBHOOK_SECRET`: For subscription verification.
 
-```bash
-cp .env.example .env.local
-# Fill in your actual credentials — see .env.example for docs
-```
-
-### 3. Initialize Database
-
-Open your Supabase project → **SQL Editor** → paste and run each file
-in `supabase/migrations/` in order (001 → 008).
-
-### 4. Run Locally
-
-```bash
-npm run dev
-# → http://localhost:3000
-```
-
-### 5. Deploy
-
-```bash
-# Push to GitHub, then import in Vercel.
-# See docs/DEPLOYMENT.md for full guide.
-```
+### **4. Database Initialization**
+Apply the migrations in `supabase/migrations/` sequentially to set up the RLS policies and pg_cron jobs.
 
 ---
 
-## Scripts
-
-| Command           | Description                           |
-| ----------------- | ------------------------------------- |
-| `npm run dev`     | Start development server (Turbopack)  |
-| `npm run build`   | Production build                      |
-| `npm run start`   | Start production server               |
-| `npm run lint`    | Run ESLint                            |
+## 📜 Compliance & Security
+ClinicPilot is built with a **Security-First** mindset:
+- **Tenant Isolation:** RLS ensures no clinic can ever access another's data.
+- **Audit Trails:** All sensitive actions are logged with hashed PII for compliance.
+- **Webhook Integrity:** All incoming webhooks (Razorpay/Meta) are verified with SHA-256 HMAC signatures.
 
 ---
 
-## Security
-
-- **Row-Level Security**: All 8 tables enforce tenant isolation at DB level
-- **Webhook Verification**: HMAC-SHA256 for Razorpay, Meta, Twilio
-- **CSRF Protection**: Origin/Referer validation on state-changing routes
-- **Rate Limiting**: Upstash Redis on booking, auth, and API endpoints
-- **Security Headers**: HSTS, X-Frame-Options, nosniff, Referrer-Policy
-- **DPDP Act Compliance**: Patient consent tracking, PII hashing
-
----
-
-## License
-
+## 📄 License
 Proprietary — © 2026 ClinicPilot Technologies. All rights reserved.
+
+> **Interested in a Demo?** Contact [Inayat](mailto:support@clinicpilot.in) for a walkthrough of the most efficient clinic engine in India.
