@@ -13,11 +13,13 @@ import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
 const ClinicProfileSchema = z.object({
-  name: z.string().min(2).max(100),
+  name: z.string().min(2).max(100).optional(),
   phone: z.string().optional(),
   address: z.string().optional(),
   logo_url: z.string().url().optional().or(z.literal('')),
-  brand_color: z.string().regex(/^#[0-9A-F]{6}$/i).optional()
+  brand_color: z.string().regex(/^#[0-9A-F]{6}$/i).optional(),
+  whatsapp_reminders_enabled: z.boolean().optional(),
+  sms_reminders_enabled: z.boolean().optional(),
 }).strict();
 
 export async function PATCH(request) {
