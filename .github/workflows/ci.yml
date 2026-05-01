@@ -60,7 +60,12 @@ jobs:
         with:
           version: latest
       - name: Run database migrations
-        run: supabase db push --db-url ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "${{ secrets.SUPABASE_DB_URL }}" ]; then
+            echo "SUPABASE_DB_URL is missing or empty. Set it in GitHub Actions secrets to a valid Postgres connection string."
+            exit 1
+          fi
+          supabase db push --db-url "${{ secrets.SUPABASE_DB_URL }}"
       - name: Deploy to Vercel
         uses: amondnet/vercel-action@v25
         with:
