@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
-import { Loader2, Search, MessageSquare, Phone, UserPlus } from "lucide-react";
+import { Loader2, Search, MessageSquare, Phone } from "lucide-react";
+import { AddPatientModal } from "@/components/AddPatientModal";
 
 export default function PatientsPage() {
   const [loading, setLoading] = useState(true);
@@ -52,9 +53,7 @@ export default function PatientsPage() {
           <h1 className="text-3xl font-bold tracking-tight">Patient Directory</h1>
           <p className="text-muted-foreground">Manage your patients and view their history.</p>
         </div>
-        <Button className="shrink-0">
-          <UserPlus className="w-4 h-4 mr-2" /> Add Patient
-        </Button>
+        <AddPatientModal onPatientAdded={(newPatient) => setPatients(prev => [newPatient, ...prev])} />
       </div>
 
       <Card>

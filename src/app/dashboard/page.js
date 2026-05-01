@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { AddBookingModal } from "@/components/AddBookingModal";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -91,7 +92,7 @@ export default async function DashboardPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Today&apos;s Schedule</CardTitle>
-          <Button size="sm">New Booking</Button>
+          <AddBookingModal />
         </CardHeader>
         <CardContent>
           <Table>
