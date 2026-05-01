@@ -101,18 +101,19 @@ export default function SettingsPage() {
     e.preventDefault();
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('clinics')
-        .update({
+      const res = await fetch('/api/settings/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           name: clinic.name,
           phone: clinic.phone,
           address: clinic.address,
           logo_url: clinic.logo_url,
           brand_color: clinic.brand_color
         })
-        .eq('id', clinic.id);
+      });
       
-      if (error) throw error;
+      if (!res.ok) throw new Error('Failed to save');
       toast.success("Profile saved successfully!");
     } catch (error) {
       toast.error("Failed to save profile");
@@ -123,12 +124,13 @@ export default function SettingsPage() {
 
   const handleToggleReminder = async (field, value) => {
     try {
-      const { error } = await supabase
-        .from('clinics')
-        .update({ [field]: value })
-        .eq('id', clinic.id);
+      const res = await fetch('/api/settings/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [field]: value })
+      });
       
-      if (error) throw error;
+      if (!res.ok) throw new Error('Failed to update');
       setClinic({ ...clinic, [field]: value });
       toast.success(`${field.replace(/_/g, ' ')} updated`);
     } catch (error) {
@@ -143,29 +145,18 @@ export default function SettingsPage() {
   const handleWorkingHoursSave = async () => {
     setSaving(true);
     try {
-      // Split into insert and update
-      const toInsert = workingHours.filter(h => h.isNew).map(h => {
+      const payload = workingHours.map(h => {
         const { isNew, ...rest } = h;
         return rest;
       });
-      const toUpdate = workingHours.filter(h => !h.isNew);
 
-      if (toInsert.length > 0) {
-        const { error } = await supabase.from('working_hours').insert(toInsert);
-        if (error) throw error;
-      }
-      
-      for (const hw of toUpdate) {
-        const { error } = await supabase
-          .from('working_hours')
-          .update({
-            start_time: hw.start_time,
-            end_time: hw.end_time,
-            is_available: hw.is_available
-          })
-          .eq('id', hw.id);
-        if (error) throw error;
-      }
+      const res = await fetch('/api/settings/working-hours', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) throw new Error('Failed to save');
 
       toast.success("Working hours saved!");
       fetchWorkingHours(selectedDoctor);
