@@ -73,7 +73,7 @@ jobs:
 
       - name: Run database migrations
         run: |
-          supabase db push
+          supabase db push --include-all
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
