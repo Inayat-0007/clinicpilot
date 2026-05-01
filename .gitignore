@@ -56,3 +56,8 @@ supabase/.temp/
 *.pem
 *.key
 *.cert
+
+# ── Agents & Tooling ────────────────────────────────────────────
+.agents/
+.claude/
+skills-lock.json

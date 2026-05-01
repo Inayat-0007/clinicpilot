@@ -31,5 +31,5 @@ BEGIN
 END;
 $$;
 
--- Grant execution to authenticated users
-GRANT EXECUTE ON FUNCTION public.setup_clinic_workspace(TEXT, TEXT, UUID) TO authenticated;
+-- Grant execution to authenticated and anon users (in case JWT is delayed)
+GRANT EXECUTE ON FUNCTION public.setup_clinic_workspace(TEXT, TEXT, UUID) TO authenticated, anon;

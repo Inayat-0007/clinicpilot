@@ -2,11 +2,11 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4"
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-const WHATSAPP_TOKEN = Deno.env.get("WHATSAPP_ACCESS_TOKEN")!
-const WHATSAPP_PHONE_ID = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID")!
-const TWILIO_ACCOUNT_SID = Deno.env.get("TWILIO_ACCOUNT_SID")!
-const TWILIO_AUTH_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN")!
-const TWILIO_PHONE_NUMBER = Deno.env.get("TWILIO_PHONE_NUMBER")!
+const WHATSAPP_TOKEN = Deno.env.get("WHATSAPP_ACCESS_TOKEN") ?? ""
+const WHATSAPP_PHONE_ID = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID") ?? ""
+const TWILIO_ACCOUNT_SID = Deno.env.get("TWILIO_ACCOUNT_SID") ?? ""
+const TWILIO_AUTH_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN") ?? ""
+const TWILIO_PHONE_NUMBER = Deno.env.get("TWILIO_PHONE_NUMBER") ?? ""
 
 // Issue 19: Sanitize template variables
 function sanitizeTemplateVar(value: string): string {
@@ -68,9 +68,27 @@ interface ReminderResult {
 // Issue 8: Use Deno.serve instead of deprecated serve()
 Deno.serve(async (req) => {
   try {
+    // Auth: Accept service_role key OR verify caller has service_role JWT claim
     const authHeader = req.headers.get('Authorization')
-    if (authHeader !== `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`) {
-      return new Response("Unauthorized", { status: 401 })
+    if (!authHeader) {
+      return new Response("Unauthorized: Missing Authorization header", { status: 401 })
+    }
+    
+    const token = authHeader.replace('Bearer ', '')
+    // Allow if the token matches the service role key directly
+    const isServiceRole = token === SUPABASE_SERVICE_ROLE_KEY
+    
+    // Also allow if it's a valid JWT with service_role
+    let isServiceRoleJWT = false
+    if (!isServiceRole) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]))
+        isServiceRoleJWT = payload.role === 'service_role'
+      } catch { /* not a valid JWT */ }
+    }
+    
+    if (!isServiceRole && !isServiceRoleJWT) {
+      return new Response("Unauthorized: Requires service_role", { status: 401 })
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
