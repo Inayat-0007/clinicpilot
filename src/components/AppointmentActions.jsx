@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import {
@@ -13,25 +12,37 @@ import {
 import { Button } from "@/components/ui/button";
 import { MoreHorizontal, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 
+/**
+ * CRITICAL-3 FIX: Removed direct Supabase client mutation.
+ * All status updates now go through /api/appointments/[id]/status
+ * which enforces server-side auth + clinic ownership verification.
+ * This eliminates the IDOR vulnerability.
+ */
 export function AppointmentActions({ appointmentId, currentStatus }) {
   const [loading, setLoading] = useState(false);
-  const supabase = createClient();
   const router = useRouter();
 
   const updateStatus = async (status) => {
     setLoading(true);
-    const { error } = await supabase
-      .from('appointments')
-      .update({ status })
-      .eq('id', appointmentId);
+    try {
+      const res = await fetch(`/api/appointments/${appointmentId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
 
-    if (error) {
-      toast.error("Failed to update status");
-    } else {
-      toast.success(`Appointment marked as ${status}`);
-      router.refresh(); // Refresh the server component to show updated data
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to update');
+      }
+
+      toast.success(`Appointment marked as ${status.replace('_', ' ')}`);
+      router.refresh();
+    } catch (error) {
+      toast.error(error.message || "Failed to update status");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (

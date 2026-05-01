@@ -14,13 +14,17 @@ export async function POST(request) {
     // Lazy-init Razorpay — avoids crash at build time when key_id is placeholder
     const Razorpay = (await import('razorpay')).default;
     
-    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+    // MEDIUM-4 FIX: .env defines NEXT_PUBLIC_RAZORPAY_KEY_ID but code used RAZORPAY_KEY_ID.
+    // Check both for backward compatibility.
+    const razorpayKeyId = process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+    const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET;
+    if (!razorpayKeyId || !razorpayKeySecret) {
       return NextResponse.json({ error: 'Payments not configured yet' }, { status: 503 });
     }
 
     const razorpay = new Razorpay({
-      key_id: process.env.RAZORPAY_KEY_ID,
-      key_secret: process.env.RAZORPAY_KEY_SECRET,
+      key_id: razorpayKeyId,
+      key_secret: razorpayKeySecret,
     });
 
     const supabase = await createClient();

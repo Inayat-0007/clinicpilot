@@ -86,7 +86,7 @@ export default function PatientsPage() {
         <CardContent>
           {loading ? (
             <div className="flex justify-center p-8"><Loader2 className="w-8 h-8 animate-spin" /></div>
-          ) : filteredPatients.length === 0 ? (
+          ) : patients.length === 0 ? (
             <div className="text-center p-12 border border-dashed rounded-lg">
               <p className="text-muted-foreground">No patients found.</p>
             </div>

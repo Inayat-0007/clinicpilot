@@ -5,6 +5,15 @@
  *              to prevent free-tier abuse and ensure paid customers
  *              get the capacity they've subscribed for.
  *
+ * SECURITY FIX (CRITICAL-1): The previous query counted ALL reminders
+ * platform-wide without scoping to the calling clinic. This allowed:
+ *   - Free-ride attack: Any clinic gets 0-count on day 1 regardless of usage
+ *   - Neighbor starvation: A high-volume clinic exhausts the aggregate count
+ *     and blocks all other clinics
+ *
+ * The fix scopes the count to the specific clinic using an inner join
+ * through the appointments table (reminders -> appointments -> clinic_id).
+ *
  * @usage
  *   import { getPlanLimits, canSendMessage } from "@/lib/plan";
  *   const limits = getPlanLimits("starter");
@@ -37,38 +46,47 @@ export function getPlanLimits(plan) {
  * Checks whether a clinic can send a message on the given channel
  * based on their current plan and this month's usage.
  *
+ * SECURITY: Fails closed — if any query errors, we deny the send.
+ * This prevents a DB error from being silently treated as "allowed".
+ *
  * @param {import("@supabase/supabase-js").SupabaseClient} supabase
  * @param {string} clinicId
  * @param {"whatsapp"|"sms"} channel
  * @returns {Promise<boolean>}
  */
 export async function canSendMessage(supabase, clinicId, channel) {
-  // 1. Get clinic plan
-  const { data: clinic } = await supabase
+  // 1. Get clinic plan — fail closed if lookup fails
+  const { data: clinic, error: clinicError } = await supabase
     .from("clinics")
     .select("subscription_plan")
     .eq("id", clinicId)
     .single();
 
-  if (!clinic) return false;
+  if (clinicError || !clinic) return false;
 
   const limits = getPlanLimits(clinic.subscription_plan);
   const limit = limits[channel];
 
-  // Infinite = always allowed
+  // Infinite = always allowed (Growth/Pro plans)
   if (limit === Infinity) return true;
 
-  // 2. Count this month's sent messages
+  // 2. Count THIS CLINIC'S sent messages this calendar month.
+  //    CRITICAL FIX: Scope to clinic via inner join through appointments.
+  //    Previously counted ALL clinics' reminders — broken billing model.
   const startOfMonth = new Date();
   startOfMonth.setDate(1);
   startOfMonth.setHours(0, 0, 0, 0);
 
-  const { count } = await supabase
+  const { count, error: countError } = await supabase
     .from("reminders")
-    .select("id", { count: "exact", head: true })
+    .select("id, appointments!inner(clinic_id)", { count: "exact", head: true })
+    .eq("appointments.clinic_id", clinicId)
     .eq("channel", channel)
     .gte("sent_at", startOfMonth.toISOString())
     .in("status", ["sent", "delivered", "read"]);
+
+  // Fail closed: if the count query fails, deny the send to be safe.
+  if (countError) return false;
 
   return (count || 0) < limit;
 }

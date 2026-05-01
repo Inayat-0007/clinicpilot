@@ -87,10 +87,17 @@ export async function POST(request) {
 
     logger.info('admin.booking.created', { clinicId: staff.clinic_id, appointmentId: appointment.id });
 
-    // FIX: Send confirmation WhatsApp message (Item #2)
+    // HIGH-1 FIX: Use NEXT_PUBLIC_APP_URL — no hardcoded production fallback
     if (patientCheck.has_whatsapp) {
-      const appUrl = process.env.APP_URL || "https://clinicpilot.in";
-      const rescheduleLink = `${appUrl}/reschedule/${appointment.reschedule_token}`;
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+      if (!appUrl) {
+        logger.error('admin.booking.missing_app_url', {
+          hint: 'Set NEXT_PUBLIC_APP_URL in your environment variables'
+        });
+      }
+      const rescheduleLink = appUrl
+        ? `${appUrl}/reschedule/${appointment.reschedule_token}`
+        : null;
       const timeString = new Date(startsAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
       
       // We don't await this so it doesn't block the response

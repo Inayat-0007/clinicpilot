@@ -1,11 +1,17 @@
+/**
+ * @file WhatsApp Message Sender
+ * @module lib/whatsapp
+ * @description Sends WhatsApp template messages via the Meta Cloud API
+ *              and records delivery status in the reminders table.
+ *
+ * HIGH-3 FIX: Previously created a new @supabase/supabase-js client on
+ * every invocation, wasting connection pool resources. Now uses the
+ * centralized createAdminClient() singleton from lib/supabase/admin.
+ */
+
 import { logger } from '@/lib/logger';
 import { withRetry } from '@/lib/retry';
-import { createClient } from '@supabase/supabase-js';
-
-// We need a service client here to insert into reminders table independently of the current user session
-// especially when called from webhooks or public endpoints.
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+import { createAdminClient } from '@/lib/supabase/admin';
 
 export async function sendWhatsAppMessage(to, templateName, parameters, appointmentId, clinicId, language = 'en') {
   const WHATSAPP_PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
@@ -53,7 +59,9 @@ export async function sendWhatsAppMessage(to, templateName, parameters, appointm
 
     const data = await response.json();
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // HIGH-3 FIX: Reuse the centralized admin client singleton
+    // instead of instantiating a new client on every call.
+    const supabase = createAdminClient();
 
     if (!response.ok) {
       logger.error('whatsapp.api.error', { status: response.status, upstream: data.error?.message });

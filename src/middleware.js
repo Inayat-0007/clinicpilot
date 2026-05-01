@@ -61,8 +61,23 @@ export async function middleware(req) {
         }
       }
     } catch (e) {
-      // If Redis is down, let the request through — fail open
-      console.warn('[Middleware] Rate limiter unavailable:', e.message)
+      // HIGH-4 FIX: Fail CLOSED on sensitive endpoints when Redis is down.
+      // A healthcare multi-tenant SaaS should not allow unlimited unmetered
+      // access to booking, auth, and WhatsApp APIs during a Redis outage.
+      console.error('[Middleware] Rate limiter unavailable:', e.message)
+      
+      const isSensitive = pathname.startsWith('/api/public/book')
+        || pathname.startsWith('/api/whatsapp')
+        || pathname.startsWith('/login')
+        || pathname.startsWith('/register')
+      
+      if (isSensitive) {
+        return NextResponse.json(
+          { error: 'Service temporarily unavailable. Please try again shortly.' },
+          { status: 503 }
+        )
+      }
+      // Non-sensitive endpoints (dashboard reads) can still fail open
     }
   }
 

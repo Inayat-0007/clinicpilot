@@ -190,16 +190,12 @@ async function processReminder(apt: any, supabase: any): Promise<ReminderResult>
       const smsResponse = await sendSMSFallback(phoneWithCode, smsText)
       channelUsed = 'sms'
       if (smsResponse.error_message) {
-        // Fallback to Email if SMS fails
-        if (Deno.env.get("RESEND_API_KEY")) {
-           console.log(`[SendReminders] Sending email to ${apt.patients.name}`);
-           channelUsed = 'email'
-           status = 'sent'
-           errorMsg = null
-        } else {
-           status = 'failed'
-           errorMsg = smsResponse.error_message
-        }
+        // HIGH-2 FIX: Email fallback was marking status='sent' without sending.
+        // That's a silent lie in healthcare reminder infrastructure.
+        // Now we honestly mark it as failed — no phantom "sent" statuses.
+        status = 'failed'
+        errorMsg = `WhatsApp failed, SMS failed: ${smsResponse.error_message}. Email channel not yet implemented.`
+        channelUsed = 'sms'
       } else {
         status = 'sent'
         externalId = smsResponse.sid

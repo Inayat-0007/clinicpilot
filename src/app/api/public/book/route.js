@@ -74,11 +74,17 @@ export async function POST(request) {
     }
 
     const dateStr = date;
+
+    // MEDIUM-3 FIX: Validate slot format to prevent NaN timestamps
+    const slotMatch = slot.match(/^(\d{1,2}):(\d{2})\s(AM|PM)$/);
+    if (!slotMatch) {
+      return NextResponse.json({ error: 'Invalid slot format. Expected "HH:MM AM/PM"' }, { status: 400 });
+    }
     
-    let [time, modifier] = slot.split(' ');
-    let [hours, minutes] = time.split(':');
+    let hours = parseInt(slotMatch[1], 10);
+    const minutes = slotMatch[2];
+    const modifier = slotMatch[3];
     
-    hours = parseInt(hours, 10);
     if (modifier === 'PM' && hours !== 12) hours += 12;
     if (modifier === 'AM' && hours === 12) hours = 0;
     
@@ -104,9 +110,17 @@ export async function POST(request) {
 
     logger.info('booking.created', { clinicId: clinic.id, appointmentId: appointment.id, phoneHash });
 
-    // FIX: Send confirmation WhatsApp message (Item #2)
-    const appUrl = process.env.APP_URL || "https://clinicpilot.in";
-    const rescheduleLink = `${appUrl}/reschedule/${appointment.reschedule_token}`;
+    // HIGH-1 FIX: Use NEXT_PUBLIC_APP_URL — no hardcoded production fallback.
+    // A missing URL logs an error instead of silently routing to wrong domain.
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+    if (!appUrl) {
+      logger.error('booking.missing_app_url', {
+        hint: 'Set NEXT_PUBLIC_APP_URL in your environment variables'
+      });
+    }
+    const rescheduleLink = appUrl
+      ? `${appUrl}/reschedule/${appointment.reschedule_token}`
+      : null;
     const timeString = startsAt.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
     
     // We don't await this so it doesn't block the response
