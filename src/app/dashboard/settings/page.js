@@ -101,22 +101,29 @@ export default function SettingsPage() {
     e.preventDefault();
     setSaving(true);
     try {
+      const payload = {
+        name: clinic.name || undefined,
+        phone: clinic.phone || null,
+        address: clinic.address || null,
+        logo_url: clinic.logo_url || '',
+        brand_color: clinic.brand_color || null
+      };
+      // Remove undefined keys so partial update works
+      Object.keys(payload).forEach(k => payload[k] === undefined && delete payload[k]);
+
       const res = await fetch('/api/settings/profile', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: clinic.name,
-          phone: clinic.phone,
-          address: clinic.address,
-          logo_url: clinic.logo_url,
-          brand_color: clinic.brand_color
-        })
+        body: JSON.stringify(payload)
       });
       
-      if (!res.ok) throw new Error('Failed to save');
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to save');
+      }
       toast.success("Profile saved successfully!");
     } catch (error) {
-      toast.error("Failed to save profile");
+      toast.error(error.message || "Failed to save profile");
     } finally {
       setSaving(false);
     }

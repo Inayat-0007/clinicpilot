@@ -81,10 +81,8 @@ export function AddPatientModal({ onPatientAdded }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="shrink-0">
-          <UserPlus className="w-4 h-4 mr-2" /> Add Patient
-        </Button>
+      <DialogTrigger render={<Button className="shrink-0" />}>
+        <UserPlus className="w-4 h-4 mr-2" /> Add Patient
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <form onSubmit={handleSubmit}>
