@@ -15,7 +15,9 @@ const nextConfig = {
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
           { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
           { key: 'X-DNS-Prefetch-Control', value: 'on' },
-          { key: 'Content-Security-Policy', value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://checkout.razorpay.com; frame-src https://checkout.razorpay.com; font-src 'self' https://fonts.gstatic.com;" },
+          // FIX #12: Removed 'unsafe-eval' — it allowed eval(), setTimeout(string), new Function()
+          // which are classic XSS vectors and negate significant CSP protection.
+          { key: 'Content-Security-Policy', value: "default-src 'self'; script-src 'self' 'unsafe-inline' https://checkout.razorpay.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://graph.facebook.com https://checkout.razorpay.com; frame-src https://checkout.razorpay.com; font-src 'self' https://fonts.gstatic.com;" },
         ]
       }
     ]

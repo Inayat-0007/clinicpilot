@@ -31,10 +31,14 @@ AS $$
   LIMIT 1;
 $$;
 
--- 2b. Hardening: Revoke direct execute from anonymous/public callers.
+-- 2b. Hardening: Revoke direct execute from anonymous callers.
 -- RLS policies can still invoke these via SECURITY DEFINER.
-REVOKE EXECUTE ON FUNCTION public.get_my_clinic_id() FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.get_my_role() FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.get_my_clinic_id() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.get_my_role() FROM anon;
+
+-- Re-grant to authenticated so frontend components can use them
+GRANT EXECUTE ON FUNCTION public.get_my_clinic_id() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_my_role() TO authenticated;
 
 -- 3. CLINICS TABLE
 ALTER TABLE public.clinics ENABLE ROW LEVEL SECURITY;

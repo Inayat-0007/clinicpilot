@@ -3,23 +3,31 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { PublicBookingSchema } from '@/lib/validation';
 import { generateToken, getTokenExpiry } from '@/lib/tokens';
 import { logger } from '@/lib/logger';
+import { validateCsrf } from '@/lib/csrf';
+import { hashPhone } from '@/lib/pii';
 
 export async function POST(request) {
   try {
+    // FIX #6: CSRF validation — reject cross-origin state-changing requests
+    const csrf = validateCsrf(request);
+    if (!csrf.valid) {
+      logger.warn('booking.csrf_rejected', { reason: csrf.error });
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const body = await request.json();
 
-    // Issue 6: Input validation FIRST with Deny by Default strict schema
     const validation = PublicBookingSchema.safeParse(body);
     if (!validation.success) {
       return NextResponse.json({ error: 'Invalid request', details: validation.error.flatten() }, { status: 400 });
     }
 
     const { slug, name, phone, slot } = validation.data;
+    // FIX #9: Hash PII before any log output — DPDP Act 2023 compliance
+    const phoneHash = hashPhone(phone);
 
-    // Issue 10: Use admin client (bypasses RLS for public booking)
     const supabase = createAdminClient();
 
-    // 1. Get Clinic ID
     const { data: clinic, error: clinicError } = await supabase
       .from('clinics')
       .select('id')
@@ -30,7 +38,6 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Clinic not found' }, { status: 404 });
     }
 
-    // 2. Upsert Patient (Match by phone and clinic)
     let patientId;
     const { data: existingPatient } = await supabase
       .from('patients')
@@ -48,7 +55,7 @@ export async function POST(request) {
           clinic_id: clinic.id,
           name,
           phone,
-          consent_given_at: new Date().toISOString(),  // Issue 14: DPDP consent
+          consent_given_at: new Date().toISOString(),
           consent_source: 'booking_form',
         }])
         .select()
@@ -58,15 +65,17 @@ export async function POST(request) {
       patientId = newPatient.id;
     }
 
-    // 3. Create Appointment
     const today = new Date();
     const dateStr = today.toISOString().split('T')[0];
-    const isPM = slot.includes('PM') && !slot.includes('12:00 PM');
-    let [hours, minutes] = slot.split(' ')[0].split(':');
-    if (isPM) hours = String(parseInt(hours) + 12);
-    if (hours === '12' && slot.includes('AM')) hours = '00';
     
-    const startsAt = new Date(`${dateStr}T${hours}:${minutes}:00`);
+    let [time, modifier] = slot.split(' ');
+    let [hours, minutes] = time.split(':');
+    
+    hours = parseInt(hours, 10);
+    if (modifier === 'PM' && hours !== 12) hours += 12;
+    if (modifier === 'AM' && hours === 12) hours = 0;
+    
+    const startsAt = new Date(`${dateStr}T${String(hours).padStart(2, '0')}:${minutes}:00`);
     const endsAt = new Date(startsAt.getTime() + 15 * 60000);
 
     const { data: appointment, error: aptError } = await supabase
@@ -77,19 +86,19 @@ export async function POST(request) {
         starts_at: startsAt.toISOString(),
         ends_at: endsAt.toISOString(),
         status: 'confirmed',
-        reschedule_token: generateToken(),                       // Issue 1: 256-bit token
-        reschedule_token_expires_at: getTokenExpiry(48),         // Issue 1: 48h expiry
+        reschedule_token: generateToken(),
+        reschedule_token_expires_at: getTokenExpiry(48),
       }])
       .select()
       .single();
 
     if (aptError) throw aptError;
 
-    logger.info('booking.created', { clinicId: clinic.id, appointmentId: appointment.id });
+    logger.info('booking.created', { clinicId: clinic.id, appointmentId: appointment.id, phoneHash });
 
     return NextResponse.json({ success: true, appointment }, { status: 200 });
   } catch (error) {
-    logger.error('booking.failed', error);
+    logger.error('booking.failed', { error: error.message });
     return NextResponse.json({ error: 'Booking failed. Please try again.' }, { status: 500 });
   }
 }

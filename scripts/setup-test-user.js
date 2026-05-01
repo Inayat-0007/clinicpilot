@@ -1,10 +1,17 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Use the Service Role Key to bypass rate limits and auto-confirm email
-const supabaseAdmin = createClient(
-  'https://qsngudfzugvswsxftqrp.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFzbmd1ZGZ6dWd2c3dzeGZ0cXJwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NzYxODEyMywiZXhwIjoyMDkzMTk0MTIzfQ.r1PbvFbTUW4aR_UojPz6A4ODmNfjSySlItlSDgXhgEA'
-);
+// SECURITY: Use environment variables — never hardcode keys
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl || !serviceRoleKey) {
+  console.error('ERROR: Missing environment variables.');
+  console.error('  Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY');
+  console.error('  Example: SUPABASE_SERVICE_ROLE_KEY=... node scripts/setup-test-user.js');
+  process.exit(1);
+}
+
+const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
 async function setupTestUser() {
   const email = 'doctor@testclinic.com';

@@ -29,19 +29,26 @@ export default async function AnalyticsPage() {
 
   const clinicId = staff.clinic_id;
 
-  // Fetch all patients and appointments for calculation
+  // FIX #24: Limit queries to avoid loading 36,000+ rows on every page visit.
+  // We only need the last 2 months of data for the KPIs shown here.
+  const now = new Date();
+  const twoMonthsAgo = startOfMonth(subMonths(now, 1)).toISOString();
+
   const { data: patients } = await supabase
     .from('patients')
     .select('created_at')
-    .eq('clinic_id', clinicId);
+    .eq('clinic_id', clinicId)
+    .gte('created_at', twoMonthsAgo)
+    .limit(2000);
 
   const { data: appointments } = await supabase
     .from('appointments')
     .select('created_at, status')
-    .eq('clinic_id', clinicId);
+    .eq('clinic_id', clinicId)
+    .gte('created_at', twoMonthsAgo)
+    .limit(2000);
 
-  // Math Setup
-  const now = new Date();
+  // Math Setup (now is defined above, before queries)
   const currentMonthStart = startOfMonth(now);
   const currentMonthEnd = endOfMonth(now);
   const lastMonthStart = startOfMonth(subMonths(now, 1));

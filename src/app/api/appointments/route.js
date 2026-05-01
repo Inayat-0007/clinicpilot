@@ -15,9 +15,16 @@ import { createClient } from '@/lib/supabase/server';
 import { generateToken, getTokenExpiry } from '@/lib/tokens';
 import { logger } from '@/lib/logger';
 import { AdminAppointmentSchema } from '@/lib/validation';
+import { validateCsrf } from '@/lib/csrf';
 
 export async function POST(request) {
   try {
+    // FIX #6: CSRF validation
+    const csrf = validateCsrf(request);
+    if (!csrf.valid) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const supabase = await createClient();
     
     // Auth check (server-side — OWASP A01: Broken Access Control)

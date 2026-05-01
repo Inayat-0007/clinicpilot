@@ -1,48 +1,19 @@
 /**
- * @file Environment Validation
- * @module lib/env
- * @description Validates that all required environment variables are set
- *              at build time. Prevents silent runtime failures caused by
- *              missing API keys or malformed URLs.
+ * @file DEPRECATED — re-exports from canonical env validation module.
+ * @description FIX #26: There were two env validation files (src/env.js and src/lib/env.js).
+ *              The Zod-based src/env.js is canonical and imported by next.config.mjs.
+ *              This file now re-exports from there for any code that imported from @/lib/env.
  *
- *              Set SKIP_ENV_VALIDATION=true in CI to bypass.
- *
- * @see CLINICPILOT_MASTER_AUDIT.md — Issue #9
+ * @deprecated Import from @/env instead. This file will be removed in a future cleanup.
  */
 
-/** @type {string[]} Variables required for the application to function. */
-const REQUIRED_VARS = [
-  "NEXT_PUBLIC_SUPABASE_URL",
-  "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-];
-
-/** @type {string[]} Variables required only in production. */
-const PRODUCTION_VARS = [
-  "SUPABASE_SERVICE_ROLE_KEY",
-  "RAZORPAY_WEBHOOK_SECRET",
-  "PII_SALT",
-];
+export { env } from "../env.js";
 
 /**
- * Validates that all required environment variables are present.
- * Call this from `next.config.mjs` or a server-side entry point.
- * @throws {Error} If a required variable is missing and validation is enabled.
+ * @deprecated validateEnv() is now handled automatically by src/env.js at build time.
+ *             This is a no-op kept for backward compatibility.
  */
 export function validateEnv() {
-  if (process.env.SKIP_ENV_VALIDATION === "true") return;
-
-  const missing = REQUIRED_VARS.filter((key) => !process.env[key]);
-
-  if (process.env.NODE_ENV === "production") {
-    const missingProd = PRODUCTION_VARS.filter((key) => !process.env[key]);
-    missing.push(...missingProd);
-  }
-
-  if (missing.length > 0) {
-    console.warn(
-      `⚠️  ClinicPilot: Missing environment variables:\n` +
-        missing.map((k) => `   - ${k}`).join("\n") +
-        `\n   Set SKIP_ENV_VALIDATION=true to bypass.`
-    );
-  }
+  // No-op: validation now happens in src/env.js via Zod at module load time.
+  // Kept to prevent import errors in any code that previously called validateEnv().
 }

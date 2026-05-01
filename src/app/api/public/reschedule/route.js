@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { generateToken, getTokenExpiry } from '@/lib/tokens';
 import { logger } from '@/lib/logger';
+import { validateCsrf } from '@/lib/csrf';
 
 export async function GET(request) {
   try {
@@ -40,6 +41,12 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
+    // FIX #6: CSRF validation
+    const csrf = validateCsrf(request);
+    if (!csrf.valid) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const { token, newSlot } = await request.json();
 
     if (!token || !newSlot) {
@@ -77,12 +84,13 @@ export async function POST(request) {
     tomorrow.setDate(tomorrow.getDate() + 1);
     const dateStr = tomorrow.toISOString().split('T')[0];
     
-    const isPM = newSlot.includes('PM') && !newSlot.includes('12:00 PM');
-    let [hours, minutes] = newSlot.split(' ')[0].split(':');
-    if (isPM) hours = String(parseInt(hours) + 12);
-    if (hours === '12' && newSlot.includes('AM')) hours = '00';
+    // FIX #4: Correct 12-hour to 24-hour conversion (12:xx PM was yielding hour 24)
+    let [timePart, meridiem] = newSlot.split(' ');
+    let [slotHours, slotMinutes] = timePart.split(':').map(Number);
+    if (meridiem === 'PM' && slotHours !== 12) slotHours += 12;
+    if (meridiem === 'AM' && slotHours === 12) slotHours = 0;
     
-    const startsAt = new Date(`${dateStr}T${hours}:${minutes}:00`);
+    const startsAt = new Date(`${dateStr}T${String(slotHours).padStart(2, '0')}:${String(slotMinutes).padStart(2, '0')}:00`);
     const endsAt = new Date(startsAt.getTime() + 15 * 60000);
 
     const { data: newApt, error: insertErr } = await supabase

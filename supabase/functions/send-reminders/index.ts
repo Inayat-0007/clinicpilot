@@ -74,20 +74,13 @@ Deno.serve(async (req) => {
       return new Response("Unauthorized: Missing Authorization header", { status: 401 })
     }
     
+    // FIX #10: Accept ONLY the actual service role key as Bearer token.
+    // The previous code decoded the JWT payload without verifying the signature,
+    // allowing anyone to forge a token with { "role": "service_role" } and bypass auth.
     const token = authHeader.replace('Bearer ', '')
-    // Allow if the token matches the service role key directly
-    const isServiceRole = token === SUPABASE_SERVICE_ROLE_KEY
+    const isServiceRole = token === SUPABASE_SERVICE_ROLE_KEY;
     
-    // Also allow if it's a valid JWT with service_role
-    let isServiceRoleJWT = false
     if (!isServiceRole) {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]))
-        isServiceRoleJWT = payload.role === 'service_role'
-      } catch { /* not a valid JWT */ }
-    }
-    
-    if (!isServiceRole && !isServiceRoleJWT) {
       return new Response("Unauthorized: Requires service_role", { status: 401 })
     }
 

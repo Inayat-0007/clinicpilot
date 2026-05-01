@@ -9,8 +9,10 @@ export async function GET() {
     const { data, error } = await supabase.from('clinics').select('id').limit(1);
 
     if (error) {
+      // FIX #16: Never leak DB error details publicly — log internally only
+      console.error('[Health] DB check failed:', error.message);
       return NextResponse.json(
-        { status: 'error', message: 'Database connection failed', error: error.message },
+        { status: 'error', message: 'Database connection failed' },
         { status: 503 }
       );
     }

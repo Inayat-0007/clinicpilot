@@ -45,14 +45,28 @@ export async function POST(req) {
       case 'subscription.activated':
       case 'subscription.charged': {
         const sub = event.payload.subscription.entity
-        await supabase
-          .from('clinics')
-          .update({
-            subscription_status: 'active',
-            razorpay_subscription_id: sub.id,
-          })
-          .eq('razorpay_subscription_id', sub.id)
-        logger.info('webhook.razorpay.subscription_activated', { subId: sub.id })
+        const clinicId = sub.notes?.clinic_id
+
+        // FIX #3: On first activation, razorpay_subscription_id isn't in DB yet.
+        // Use clinic_id from notes for initial activation, fall back to sub ID for subsequent charges.
+        if (clinicId) {
+          await supabase
+            .from('clinics')
+            .update({
+              subscription_status: 'active',
+              razorpay_subscription_id: sub.id,
+            })
+            .eq('id', clinicId)
+        } else {
+          await supabase
+            .from('clinics')
+            .update({
+              subscription_status: 'active',
+              razorpay_subscription_id: sub.id,
+            })
+            .eq('razorpay_subscription_id', sub.id)
+        }
+        logger.info('webhook.razorpay.subscription_activated', { subId: sub.id, clinicId })
         break
       }
       case 'subscription.cancelled':

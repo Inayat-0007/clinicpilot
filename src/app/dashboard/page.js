@@ -37,16 +37,32 @@ export default async function DashboardPage() {
     .from('appointments')
     .select(`
       id, starts_at, status, notes,
-      patients (name, phone)
+      patients (name, phone),
+      reminders (id, status, channel)
     `)
     .eq('clinic_id', clinicId)
     .gte('starts_at', todayStart)
     .lte('starts_at', todayEnd)
     .order('starts_at', { ascending: true });
 
+  // FIX #18: Fetch real WhatsApp sent count for this month
+  const startOfThisMonth = new Date();
+  startOfThisMonth.setDate(1);
+  startOfThisMonth.setHours(0, 0, 0, 0);
+
+  const { count: whatsappSentCount } = await supabase
+    .from('reminders')
+    .select('id', { count: 'exact', head: true })
+    .eq('channel', 'whatsapp')
+    .in('status', ['sent', 'delivered', 'read'])
+    .gte('sent_at', startOfThisMonth.toISOString());
+
   const totalAppointments = appointments?.length || 0;
   const noShows = appointments?.filter(a => a.status === 'no_show').length || 0;
   const noShowRate = totalAppointments > 0 ? Math.round((noShows / totalAppointments) * 100) : 0;
+  // FIX #20: Estimate revenue saved: each prevented no-show saves ~₹200 avg consultation fee
+  const preventedNoShows = appointments?.filter(a => a.status === 'confirmed' || a.status === 'completed').length || 0;
+  const revenueSaved = preventedNoShows * 200;
 
   return (
     <div className="space-y-6">
@@ -67,8 +83,9 @@ export default async function DashboardPage() {
             <CardTitle className="text-sm font-medium">WhatsApp Sent</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">Pending Meta Approval</p>
+            {/* FIX #18: Real count from reminders table, not hardcoded 0 */}
+            <div className="text-2xl font-bold">{whatsappSentCount ?? 0}</div>
+            <p className="text-xs text-muted-foreground">This month</p>
           </CardContent>
         </Card>
         <Card>
@@ -84,7 +101,9 @@ export default async function DashboardPage() {
             <CardTitle className="text-sm font-medium">Revenue Saved</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₹0</div>
+            {/* FIX #20: Calculated from confirmed appointments × ₹200 avg fee */}
+            <div className="text-2xl font-bold">₹{revenueSaved.toLocaleString('en-IN')}</div>
+            <p className="text-xs text-muted-foreground">Est. via no-show prevention</p>
           </CardContent>
         </Card>
       </div>
@@ -122,7 +141,20 @@ export default async function DashboardPage() {
                         {apt.status}
                       </Badge>
                     </TableCell>
-                    <TableCell><Badge variant="outline">Pending</Badge></TableCell>
+                    <TableCell>
+                      {/* FIX #19: Show actual reminder status from the joined reminders data */}
+                      {apt.reminders && apt.reminders.length > 0 ? (
+                        <Badge variant="outline" className={
+                          apt.reminders[0].status === 'sent' || apt.reminders[0].status === 'delivered' ? "bg-green-100 text-green-800" :
+                          apt.reminders[0].status === 'failed' ? "bg-red-100 text-red-800" :
+                          "bg-yellow-100 text-yellow-800"
+                        }>
+                          {apt.reminders[0].channel === 'whatsapp' ? '📱 ' : '💬 '}{apt.reminders[0].status}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-gray-100 text-gray-600">Not sent</Badge>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))
               ) : (

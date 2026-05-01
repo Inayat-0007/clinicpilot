@@ -28,12 +28,32 @@ export default function LoginPage() {
     });
 
     if (error) {
-      toast.error(error.message);
+      // FIX #13: Generic error message — prevents user enumeration attacks.
+      // Never expose Supabase's specific errors like "Email not confirmed" or
+      // "Invalid login credentials" which distinguish between account states.
+      toast.error('Invalid email or password.');
       setLoading(false);
     } else {
-      toast.success("Welcome back!");
-      router.push("/dashboard");
+      toast.success('Welcome back!');
+      router.push('/dashboard');
       router.refresh();
+    }
+  };
+
+  // FIX #23: Password reset handler
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    if (!email) {
+      toast.error('Please enter your email address first.');
+      return;
+    }
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/reset-password`,
+    });
+    if (error) {
+      toast.error('Could not send reset email. Please try again.');
+    } else {
+      toast.success('Password reset email sent. Check your inbox.');
     }
   };
 
@@ -77,7 +97,9 @@ export default function LoginPage() {
         <div className="relative z-10 flex items-center gap-4 text-sm font-medium text-blue-300">
           <div className="flex -space-x-3">
             {[1,2,3,4].map(i => (
-              <div key={i} className={`w-10 h-10 rounded-full border-2 border-indigo-900 bg-slate-200 flex items-center justify-center text-xs text-slate-800 font-bold bg-[url('https://i.pravatar.cc/100?img=${i}')] bg-cover`}></div>
+              <div key={i} className="w-10 h-10 rounded-full border-2 border-indigo-900 bg-slate-300 flex items-center justify-center text-xs text-slate-700 font-bold" aria-hidden="true">
+                {String.fromCharCode(64 + i)}
+              </div>
             ))}
           </div>
           <p>Joined by 500+ top clinics across India.</p>
@@ -122,7 +144,7 @@ export default function LoginPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password" className="text-slate-700 font-semibold">Password</Label>
-                <Link href="#" className="text-sm font-semibold text-blue-600 hover:text-blue-700">Forgot password?</Link>
+                <Link href="#" onClick={handleForgotPassword} className="text-sm font-semibold text-blue-600 hover:text-blue-700">Forgot password?</Link>
               </div>
               <Input 
                 id="password" 

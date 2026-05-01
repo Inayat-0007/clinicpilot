@@ -1,9 +1,16 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  'https://qsngudfzugvswsxftqrp.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFzbmd1ZGZ6dWd2c3dzeGZ0cXJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2MTgxMjMsImV4cCI6MjA5MzE5NDEyM30.ZkXPro040ro2bkBNSWLJ8zxFjVz73shT-GJfSu1EosY'
-);
+// SECURITY: Use environment variables — never hardcode keys
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !anonKey) {
+  console.error('ERROR: Missing environment variables.');
+  console.error('  Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY');
+  process.exit(1);
+}
+
+const supabase = createClient(supabaseUrl, anonKey);
 
 async function testSignup() {
   console.log("Testing signup...");

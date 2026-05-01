@@ -6,10 +6,10 @@
  *              brute-force attacks, DDoS, and API abuse.
  *
  * @usage
- *   import { bookingLimiter } from "@/lib/ratelimit";
- *   const { success } = await bookingLimiter.limit(ip);
+ *   import { bookingRatelimit } from "@/lib/ratelimit";
+ *   const { success } = await bookingRatelimit.limit(ip);
  *
- * @see CLINICPILOT_MASTER_AUDIT.md — Issue #4
+ * @see CLINICPILOT_MASTER_AUDIT.md — Issue #1 (FIXED: export names now match middleware imports)
  */
 
 import { Ratelimit } from "@upstash/ratelimit";
@@ -33,13 +33,13 @@ function createLimiter(prefix, tokens, window) {
 }
 
 /** 5 bookings per IP per 60 seconds. */
-export const bookingLimiter = createLimiter("booking", 5, "60 s");
+export const bookingRatelimit = createLimiter("booking", 5, "60 s");
 
 /** 3 reschedule attempts per IP per 60 seconds. */
-export const rescheduleLimiter = createLimiter("reschedule", 3, "60 s");
+export const rescheduleRatelimit = createLimiter("reschedule", 3, "60 s");
 
 /** 10 auth attempts per IP per 5 minutes. */
-export const authLimiter = createLimiter("auth", 10, "5 m");
+export const authRatelimit = createLimiter("auth", 10, "5 m");
 
 /** 10 WhatsApp messages per IP per 1 minute (prevent cost exhaustion) */
 export const whatsappLimiter = createLimiter("whatsapp", 10, "1 m");
