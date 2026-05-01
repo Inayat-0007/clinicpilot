@@ -9,6 +9,8 @@ const envSchema = z.object({
   RAZORPAY_WEBHOOK_SECRET: z.string().min(1).optional(),
   WHATSAPP_PHONE_NUMBER_ID: z.string().min(1).optional(),
   WHATSAPP_ACCESS_TOKEN: z.string().min(1).optional(),
+  PII_SALT: z.string().min(1).optional(),
+  NEXT_PUBLIC_APP_URL: z.string().url().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

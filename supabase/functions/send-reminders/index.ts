@@ -160,7 +160,8 @@ async function processReminder(apt: any, supabase: any): Promise<ReminderResult>
     return { appointmentId: apt.id, status: 'sent', channel: 'whatsapp' }
   }
 
-  const rescheduleLink = `https://clinicpilot.com/reschedule/${apt.reschedule_token}`
+  const appUrl = Deno.env.get("APP_URL") || "https://clinicpilot.in"
+  const rescheduleLink = `${appUrl}/reschedule/${apt.reschedule_token}`
   const timeString = new Date(apt.starts_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
   const phoneWithCode = apt.patients.phone.startsWith('+') ? apt.patients.phone : `+91${apt.patients.phone}`
   const waPhone = phoneWithCode.replace('+', '')

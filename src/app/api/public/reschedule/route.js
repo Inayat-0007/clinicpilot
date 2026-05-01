@@ -17,7 +17,7 @@ export async function GET(request) {
 
     const { data: appointment, error } = await supabase
       .from('appointments')
-      .select('id, starts_at, reschedule_token_expires_at, clinics(name), patients(name, phone)')
+      .select('id, starts_at, reschedule_token_expires_at, clinics(name, slug), patients(name, phone)')
       .eq('reschedule_token', token)
       .eq('status', 'confirmed')
       .single();
@@ -47,10 +47,10 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { token, newSlot } = await request.json();
+    const { token, date, newSlot } = await request.json();
 
-    if (!token || !newSlot) {
-      return NextResponse.json({ error: 'Missing token or slot' }, { status: 400 });
+    if (!token || !date || !newSlot) {
+      return NextResponse.json({ error: 'Missing token, date, or slot' }, { status: 400 });
     }
 
     const supabase = createAdminClient();
@@ -79,12 +79,10 @@ export async function POST(request) {
       reschedule_token_expires_at: null,
     }).eq('id', appointment.id);
 
-    // Create new appointment
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const dateStr = tomorrow.toISOString().split('T')[0];
+    // Use provided date
+    const dateStr = date;
     
-    // FIX #4: Correct 12-hour to 24-hour conversion (12:xx PM was yielding hour 24)
+    // FIX #4: Correct 12-hour to 24-hour conversion
     let [timePart, meridiem] = newSlot.split(' ');
     let [slotHours, slotMinutes] = timePart.split(':').map(Number);
     if (meridiem === 'PM' && slotHours !== 12) slotHours += 12;

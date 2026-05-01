@@ -22,7 +22,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Invalid request', details: validation.error.flatten() }, { status: 400 });
     }
 
-    const { slug, name, phone, slot } = validation.data;
+    const { slug, name, phone, date, slot, doctorId } = validation.data;
     // FIX #9: Hash PII before any log output — DPDP Act 2023 compliance
     const phoneHash = hashPhone(phone);
 
@@ -30,13 +30,20 @@ export async function POST(request) {
 
     const { data: clinic, error: clinicError } = await supabase
       .from('clinics')
-      .select('id')
+      .select('id, doctors(id)')
       .eq('slug', slug)
       .single();
 
     if (clinicError || !clinic) {
       return NextResponse.json({ error: 'Clinic not found' }, { status: 404 });
     }
+
+    const doctor = clinic.doctors.find(d => d.id === doctorId);
+    if (!doctor) {
+      return NextResponse.json({ error: 'Doctor not found at this clinic' }, { status: 400 });
+    }
+
+    const actualDoctorId = doctor.id;
 
     let patientId;
     const { data: existingPatient } = await supabase
@@ -65,8 +72,7 @@ export async function POST(request) {
       patientId = newPatient.id;
     }
 
-    const today = new Date();
-    const dateStr = today.toISOString().split('T')[0];
+    const dateStr = date;
     
     let [time, modifier] = slot.split(' ');
     let [hours, minutes] = time.split(':');
@@ -82,6 +88,7 @@ export async function POST(request) {
       .from('appointments')
       .insert([{
         clinic_id: clinic.id,
+        doctor_id: actualDoctorId,
         patient_id: patientId,
         starts_at: startsAt.toISOString(),
         ends_at: endsAt.toISOString(),
