@@ -84,28 +84,26 @@ export function AddBookingModal({ onBookingAdded }) {
     setLoading(true);
 
     try {
-      const { data: clinicId } = await supabase.rpc('get_my_clinic_id');
-      if (!clinicId) throw new Error("Could not determine your clinic workspace.");
-
       // Calculate start and end times
       const starts_at = new Date(`${formData.date}T${formData.time}`).toISOString();
       const ends_at = new Date(new Date(starts_at).getTime() + parseInt(formData.duration) * 60000).toISOString();
 
-      const { data, error } = await supabase
-        .from("appointments")
-        .insert([{ 
-          clinic_id: clinicId,
-          patient_id: formData.patient_id,
-          doctor_id: formData.doctor_id || null,
-          starts_at,
-          ends_at,
-          notes: formData.notes,
-          status: 'confirmed'
-        }])
-        .select(`*, patients(name, phone)`)
-        .single();
+      const response = await fetch('/api/appointments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          patientId: formData.patient_id,
+          doctorId: formData.doctor_id || undefined,
+          startsAt: starts_at,
+          endsAt: ends_at,
+          notes: formData.notes
+        })
+      });
 
-      if (error) throw error;
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to add appointment");
+      }
 
       toast.success("Appointment booked successfully");
       setOpen(false);
@@ -115,7 +113,7 @@ export function AddBookingModal({ onBookingAdded }) {
       
       if (onBookingAdded) {
         // We use router.refresh() in parent usually or just reload page
-        onBookingAdded(data);
+        onBookingAdded(result.appointment);
       } else {
         window.location.reload(); // Simple refresh for server components parent
       }

@@ -72,7 +72,33 @@ export default function DashboardLayout({ children }) {
   const router = useRouter();
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [clinicSlug, setClinicSlug] = useState("");
+  const [userInitials, setUserInitials] = useState("");
   const supabase = createClient();
+
+  useEffect(() => {
+    async function fetchClinicData() {
+      try {
+        const { data: clinicId } = await supabase.rpc('get_my_clinic_id');
+        if (clinicId) {
+          const { data: clinic } = await supabase.from('clinics').select('slug').eq('id', clinicId).single();
+          if (clinic) setClinicSlug(clinic.slug);
+        }
+        
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: staff } = await supabase.from('staff').select('name').eq('user_id', user.id).single();
+          if (staff && staff.name) {
+            const initials = staff.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+            setUserInitials(initials);
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    fetchClinicData();
+  }, [supabase]);
 
   // FIX #5: Proper logout handler that calls supabase.auth.signOut()
   const handleLogout = async () => {
@@ -82,12 +108,12 @@ export default function DashboardLayout({ children }) {
   };
 
   // FIX #17: Copy the current clinic's public booking link to clipboard.
-  // The slug is extracted from the window URL for now; ideally pass it via props.
   const handleCopyBookingLink = async () => {
     try {
-      const clipboardText = `${window.location.origin}/book/[your-clinic-slug]`;
+      if (!clinicSlug) throw new Error("Slug not loaded yet");
+      const clipboardText = `${window.location.origin}/book/${clinicSlug}`;
       await navigator.clipboard.writeText(clipboardText);
-      toast.success("Booking link copied! Replace [your-clinic-slug] with your actual slug.");
+      toast.success("Booking link copied!");
     } catch {
       toast.error("Could not copy link. Please copy it manually from Settings.");
     }
@@ -137,7 +163,7 @@ export default function DashboardLayout({ children }) {
               Copy Booking Link
             </Button>
             <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-              Dr
+              {userInitials}
             </div>
           </div>
         </header>

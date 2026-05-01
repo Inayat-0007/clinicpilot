@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AddBookingModal } from "@/components/AddBookingModal";
+import { AppointmentActions } from "@/components/AppointmentActions";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -38,6 +39,7 @@ export default async function DashboardPage() {
     .select(`
       id, starts_at, status, notes,
       patients (name, phone),
+      doctors (name),
       reminders (id, status, channel)
     `)
     .eq('clinic_id', clinicId)
@@ -60,9 +62,7 @@ export default async function DashboardPage() {
   const totalAppointments = appointments?.length || 0;
   const noShows = appointments?.filter(a => a.status === 'no_show').length || 0;
   const noShowRate = totalAppointments > 0 ? Math.round((noShows / totalAppointments) * 100) : 0;
-  // FIX #20: Estimate revenue saved: each prevented no-show saves ~₹200 avg consultation fee
-  const preventedNoShows = appointments?.filter(a => a.status === 'confirmed' || a.status === 'completed').length || 0;
-  const revenueSaved = preventedNoShows * 200;
+  const attendedAppointments = appointments?.filter(a => a.status === 'completed' || a.status === 'confirmed').length || 0;
 
   return (
     <div className="space-y-6">
@@ -98,12 +98,11 @@ export default async function DashboardPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Revenue Saved</CardTitle>
+            <CardTitle className="text-sm font-medium">Attended/Confirmed</CardTitle>
           </CardHeader>
           <CardContent>
-            {/* FIX #20: Calculated from confirmed appointments × ₹200 avg fee */}
-            <div className="text-2xl font-bold">₹{revenueSaved.toLocaleString('en-IN')}</div>
-            <p className="text-xs text-muted-foreground">Est. via no-show prevention</p>
+            <div className="text-2xl font-bold">{attendedAppointments}</div>
+            <p className="text-xs text-muted-foreground">Appointments today</p>
           </CardContent>
         </Card>
       </div>
@@ -120,8 +119,10 @@ export default async function DashboardPage() {
                 <TableHead>Time</TableHead>
                 <TableHead>Patient</TableHead>
                 <TableHead>Phone</TableHead>
+                <TableHead>Doctor</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Reminders</TableHead>
+                <TableHead className="w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -133,6 +134,7 @@ export default async function DashboardPage() {
                     </TableCell>
                     <TableCell>{apt.patients?.name}</TableCell>
                     <TableCell>{apt.patients?.phone ? `•••••${apt.patients.phone.slice(-4)}` : '—'}</TableCell>
+                    <TableCell>Dr. {apt.doctors?.name || '—'}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className={
                         apt.status === 'confirmed' ? "bg-green-100 text-green-800" :
@@ -155,11 +157,14 @@ export default async function DashboardPage() {
                         <Badge variant="outline" className="bg-gray-100 text-gray-600">Not sent</Badge>
                       )}
                     </TableCell>
+                    <TableCell>
+                      <AppointmentActions appointmentId={apt.id} currentStatus={apt.status} />
+                    </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-4 text-gray-500">
+                  <TableCell colSpan={7} className="text-center py-4 text-gray-500">
                     No appointments scheduled for today.
                   </TableCell>
                 </TableRow>

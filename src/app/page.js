@@ -91,20 +91,20 @@ export default function LandingPage() {
            <div className="container px-4 md:px-6 mx-auto">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center divide-x divide-slate-100">
                 <div className="flex flex-col items-center justify-center">
-                  <h4 className="text-4xl font-black text-slate-900 mb-1">40%</h4>
-                  <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Fewer No-Shows</p>
+                  <h4 className="text-4xl font-black text-slate-900 mb-1">Reduce</h4>
+                  <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Patient No-Shows</p>
                 </div>
                 <div className="flex flex-col items-center justify-center">
                   <h4 className="text-4xl font-black text-slate-900 mb-1">100%</h4>
                   <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Automated</p>
                 </div>
                 <div className="flex flex-col items-center justify-center">
-                  <h4 className="text-4xl font-black text-slate-900 mb-1">2 mins</h4>
+                  <h4 className="text-4xl font-black text-slate-900 mb-1">Quick</h4>
                   <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider">To Setup</p>
                 </div>
                 <div className="flex flex-col items-center justify-center">
-                  <h4 className="text-4xl font-black text-slate-900 mb-1">₹30k</h4>
-                  <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Avg. Saved/Mo</p>
+                  <h4 className="text-4xl font-black text-slate-900 mb-1">Maximize</h4>
+                  <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Clinic Revenue</p>
                 </div>
               </div>
            </div>

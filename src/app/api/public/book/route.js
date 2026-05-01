@@ -5,6 +5,7 @@ import { generateToken, getTokenExpiry } from '@/lib/tokens';
 import { logger } from '@/lib/logger';
 import { validateCsrf } from '@/lib/csrf';
 import { hashPhone } from '@/lib/pii';
+import { sendWhatsAppMessage } from '@/lib/whatsapp';
 
 export async function POST(request) {
   try {
@@ -30,7 +31,7 @@ export async function POST(request) {
 
     const { data: clinic, error: clinicError } = await supabase
       .from('clinics')
-      .select('id, doctors(id)')
+      .select('id, name, doctors(id)')
       .eq('slug', slug)
       .single();
 
@@ -102,6 +103,20 @@ export async function POST(request) {
     if (aptError) throw aptError;
 
     logger.info('booking.created', { clinicId: clinic.id, appointmentId: appointment.id, phoneHash });
+
+    // FIX: Send confirmation WhatsApp message (Item #2)
+    const appUrl = process.env.APP_URL || "https://clinicpilot.in";
+    const rescheduleLink = `${appUrl}/reschedule/${appointment.reschedule_token}`;
+    const timeString = startsAt.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+    
+    // We don't await this so it doesn't block the response
+    sendWhatsAppMessage(
+      phone, 
+      'booking_confirmation', 
+      [name, timeString, clinic.name, rescheduleLink],
+      appointment.id,
+      clinic.id
+    ).catch(err => logger.error('whatsapp.confirmation.failed_async', err));
 
     return NextResponse.json({ success: true, appointment }, { status: 200 });
   } catch (error) {

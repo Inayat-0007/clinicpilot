@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { subMonths, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3, Clock, TrendingUp, Users } from "lucide-react";
+import { AnalyticsCharts } from "@/components/AnalyticsCharts";
 
 export const metadata = {
   title: "Analytics | ClinicPilot",
@@ -43,7 +44,7 @@ export default async function AnalyticsPage() {
 
   const { data: appointments } = await supabase
     .from('appointments')
-    .select('created_at, status')
+    .select('created_at, starts_at, status')
     .eq('clinic_id', clinicId)
     .gte('created_at', twoMonthsAgo)
     .limit(2000);
@@ -93,9 +94,9 @@ export default async function AnalyticsPage() {
   
   const noShowGrowth = currentMonthNoShowRate - lastMonthNoShowRate; // absolute percentage points difference
 
-  // Hours Saved (Approx 5 minutes saved per confirmed/completed appointment via automated reminders/booking)
-  const confirmedOrCompleted = safeAppointments.filter(a => ['confirmed', 'completed'].includes(a.status)).length;
-  const hoursSaved = Math.round((confirmedOrCompleted * 5) / 60);
+  // Completion Rate Math
+  const completedAppts = safeAppointments.filter(a => a.status === 'completed').length;
+  const completionRate = totalAppointments > 0 ? Math.round((completedAppts / totalAppointments) * 100) : 0;
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -145,25 +146,17 @@ export default async function AnalyticsPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Hours Saved</CardTitle>
+            <CardTitle className="text-sm font-medium">Completion Rate</CardTitle>
             <Clock className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{hoursSaved}h</div>
-            <p className="text-xs text-muted-foreground">via automated reminders</p>
+            <div className="text-2xl font-bold">{completionRate}%</div>
+            <p className="text-xs text-muted-foreground">Lifetime completion</p>
           </CardContent>
         </Card>
       </div>
 
-      <Card className="mt-6 border-dashed border-2">
-        <CardHeader className="text-center pb-8 pt-12">
-          <BarChart3 className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-          <CardTitle className="text-xl">Detailed Analytics Coming Soon</CardTitle>
-          <CardDescription className="max-w-md mx-auto mt-2">
-            We are gathering data from your appointments. Advanced charts and demographic breakdowns will appear here once you have more activity.
-          </CardDescription>
-        </CardHeader>
-      </Card>
+      <AnalyticsCharts appointments={safeAppointments} />
     </div>
   );
 }

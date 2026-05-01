@@ -106,7 +106,9 @@ export default function SettingsPage() {
         .update({
           name: clinic.name,
           phone: clinic.phone,
-          address: clinic.address
+          address: clinic.address,
+          logo_url: clinic.logo_url,
+          brand_color: clinic.brand_color
         })
         .eq('id', clinic.id);
       
@@ -117,6 +119,25 @@ export default function SettingsPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleToggleReminder = async (field, value) => {
+    try {
+      const { error } = await supabase
+        .from('clinics')
+        .update({ [field]: value })
+        .eq('id', clinic.id);
+      
+      if (error) throw error;
+      setClinic({ ...clinic, [field]: value });
+      toast.success(`${field.replace(/_/g, ' ')} updated`);
+    } catch (error) {
+      toast.error(`Failed to update settings`);
+    }
+  };
+
+  const handleSyncMeta = () => {
+    toast.info("Meta Business API integration required to sync templates.");
   };
 
   const handleWorkingHoursSave = async () => {
@@ -172,7 +193,9 @@ export default function SettingsPage() {
         <TabsList>
           <TabsTrigger value="profile">Clinic Profile</TabsTrigger>
           <TabsTrigger value="hours">Working Hours</TabsTrigger>
+          <TabsTrigger value="team">Team & Doctors</TabsTrigger>
           <TabsTrigger value="templates">Message Templates</TabsTrigger>
+          <TabsTrigger value="billing">Subscription</TabsTrigger>
         </TabsList>
         
         {/* PROFILE TAB */}
@@ -210,6 +233,33 @@ export default function SettingsPage() {
                         onChange={(e) => setClinic({...clinic, address: e.target.value})}
                       />
                     </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="logo_url">Logo URL (Optional)</Label>
+                      <Input 
+                        id="logo_url" 
+                        placeholder="https://example.com/logo.png"
+                        value={clinic.logo_url || ''} 
+                        onChange={(e) => setClinic({...clinic, logo_url: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="brand_color">Brand Color</Label>
+                      <div className="flex gap-2">
+                        <Input 
+                          id="brand_color_picker" 
+                          type="color"
+                          value={clinic.brand_color || '#2563eb'} 
+                          onChange={(e) => setClinic({...clinic, brand_color: e.target.value})}
+                          className="w-12 h-10 p-1"
+                        />
+                        <Input 
+                          id="brand_color" 
+                          value={clinic.brand_color || '#2563eb'} 
+                          onChange={(e) => setClinic({...clinic, brand_color: e.target.value})}
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
                     <Button type="submit" disabled={saving}>
                       {saving ? "Saving..." : "Save Profile"}
                     </Button>
@@ -229,7 +279,10 @@ export default function SettingsPage() {
                     <Label>WhatsApp Reminders</Label>
                     <p className="text-sm text-muted-foreground">Send 24h & 2h reminders via Meta WhatsApp API.</p>
                   </div>
-                  <Switch checked={true} disabled />
+                  <Switch 
+                    checked={clinic.whatsapp_reminders_enabled ?? true} 
+                    onCheckedChange={(val) => handleToggleReminder('whatsapp_reminders_enabled', val)} 
+                  />
                 </div>
                 
                 <div className="flex items-center justify-between space-x-2">
@@ -237,7 +290,10 @@ export default function SettingsPage() {
                     <Label>SMS Fallback</Label>
                     <p className="text-sm text-muted-foreground">Send an SMS via Twilio if WhatsApp delivery fails.</p>
                   </div>
-                  <Switch checked={true} disabled />
+                  <Switch 
+                    checked={clinic.sms_reminders_enabled ?? true} 
+                    onCheckedChange={(val) => handleToggleReminder('sms_reminders_enabled', val)} 
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -329,7 +385,7 @@ export default function SettingsPage() {
               {templates.length === 0 ? (
                 <div className="text-center p-8 border rounded-md bg-muted/50">
                   <p className="text-muted-foreground mb-4">No templates found. They must be created in Meta Business Manager first, then synced here.</p>
-                  <Button variant="outline">Sync from Meta</Button>
+                  <Button variant="outline" onClick={handleSyncMeta}>Sync from Meta</Button>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -347,6 +403,61 @@ export default function SettingsPage() {
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* TEAM TAB */}
+        <TabsContent value="team" className="mt-6">
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle>Team & Doctors</CardTitle>
+                  <CardDescription>Manage staff access and doctor profiles.</CardDescription>
+                </div>
+                <Button size="sm">Add Member</Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {doctors.map(d => (
+                  <div key={d.id} className="flex items-center justify-between p-4 border rounded-md">
+                    <div>
+                      <p className="font-medium">Dr. {d.name}</p>
+                      <p className="text-sm text-muted-foreground">{d.specialization || 'General'}</p>
+                    </div>
+                    <Button variant="ghost" size="sm">Edit</Button>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* BILLING TAB */}
+        <TabsContent value="billing" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Subscription & Billing</CardTitle>
+              <CardDescription>Manage your plan and payment methods.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {clinic && (
+                <div className="space-y-4">
+                  <div className="p-4 border rounded-md bg-muted/20">
+                    <h3 className="font-semibold text-lg capitalize">{clinic.subscription_plan} Plan</h3>
+                    <p className="text-sm text-muted-foreground">Status: <span className="font-medium capitalize">{clinic.subscription_status}</span></p>
+                    {clinic.subscription_status === 'active' && clinic.subscription_plan === 'trial' && (
+                      <p className="text-sm text-amber-600 mt-2 font-medium">Your trial ends on {new Date(clinic.trial_ends_at).toLocaleDateString()}</p>
+                    )}
+                  </div>
+                  <div>
+                    <Button variant="default">Upgrade Plan</Button>
+                    <Button variant="outline" className="ml-2">Manage Billing Portal</Button>
+                  </div>
                 </div>
               )}
             </CardContent>

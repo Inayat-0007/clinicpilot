@@ -13,22 +13,33 @@ export default function PatientsPage() {
   const [loading, setLoading] = useState(true);
   const [patients, setPatients] = useState([]);
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const PAGE_SIZE = 10;
   const supabase = createClient();
 
   useEffect(() => {
     async function fetchPatients() {
       try {
         setLoading(true);
-        const { data, error } = await supabase
+        let query = supabase
           .from('patients')
-          .select(`
-            *,
-            appointments:appointments(count)
-          `)
-          .order('created_at', { ascending: false });
+          .select(`*, appointments:appointments(count)`, { count: 'exact' });
+        
+        if (search) {
+           query = query.or(`name.ilike.%${search}%,phone.ilike.%${search}%`);
+        }
+
+        const from = (page - 1) * PAGE_SIZE;
+        const to = from + PAGE_SIZE - 1;
+
+        const { data, count, error } = await query
+          .order('created_at', { ascending: false })
+          .range(from, to);
         
         if (error) throw error;
         setPatients(data || []);
+        if (count !== null) setTotalCount(count);
       } catch (error) {
         console.error(error);
         toast.error("Failed to load patients");
@@ -37,14 +48,14 @@ export default function PatientsPage() {
       }
     }
     
-    fetchPatients();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const timer = setTimeout(() => {
+      fetchPatients();
+    }, 300);
+    
+    return () => clearTimeout(timer);
+  }, [page, search, supabase]);
 
-  const filteredPatients = patients.filter(p => 
-    p.name.toLowerCase().includes(search.toLowerCase()) || 
-    p.phone.includes(search)
-  );
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
   return (
     <div className="space-y-6">
@@ -65,7 +76,10 @@ export default function PatientsPage() {
               placeholder="Search by name or phone..."
               className="pl-9"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1); // Reset to first page on search
+              }}
             />
           </div>
         </CardHeader>
@@ -89,7 +103,7 @@ export default function PatientsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {filteredPatients.map((patient) => (
+                  {patients.map((patient) => (
                     <tr key={patient.id} className="hover:bg-muted/50 transition-colors">
                       <td className="px-4 py-3 font-medium">{patient.name}</td>
                       <td className="px-4 py-3">
@@ -115,6 +129,31 @@ export default function PatientsPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4">
+              <span className="text-sm text-muted-foreground">
+                Showing {(page - 1) * PAGE_SIZE + 1} to {Math.min(page * PAGE_SIZE, totalCount)} of {totalCount}
+              </span>
+              <div className="flex space-x-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  disabled={page === 1}
+                  onClick={() => setPage(p => p - 1)}
+                >
+                  Previous
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  disabled={page === totalPages}
+                  onClick={() => setPage(p => p + 1)}
+                >
+                  Next
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>

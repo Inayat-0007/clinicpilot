@@ -48,10 +48,15 @@ export function AddPatientModal({ onPatientAdded }) {
       if (rpcError) throw rpcError;
       if (!clinicId) throw new Error("Could not determine your clinic workspace.");
 
-      // Insert patient
+      // Insert patient with consent tracking (DPDP Act)
       const { data, error } = await supabase
         .from("patients")
-        .insert([{ ...formData, clinic_id: clinicId }])
+        .insert([{ 
+          ...formData, 
+          clinic_id: clinicId,
+          consent_given_at: new Date().toISOString(),
+          consent_source: 'clinic_admin_dashboard'
+        }])
         .select()
         .single();
 

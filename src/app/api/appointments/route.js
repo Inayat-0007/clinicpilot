@@ -16,6 +16,7 @@ import { generateToken, getTokenExpiry } from '@/lib/tokens';
 import { logger } from '@/lib/logger';
 import { AdminAppointmentSchema } from '@/lib/validation';
 import { validateCsrf } from '@/lib/csrf';
+import { sendWhatsAppMessage } from '@/lib/whatsapp';
 
 export async function POST(request) {
   try {
@@ -40,12 +41,12 @@ export async function POST(request) {
     if (!validation.success) {
       return NextResponse.json({ error: 'Invalid request', details: validation.error.flatten() }, { status: 400 });
     }
-    const { patientId, startsAt, endsAt, notes } = validation.data;
+    const { patientId, doctorId, startsAt, endsAt, notes } = validation.data;
 
     // Get clinic via staff record (enforced via RLS)
     const { data: staff } = await supabase
       .from('staff')
-      .select('clinic_id')
+      .select('clinic_id, clinics(name)')
       .eq('user_id', user.id)
       .single();
 
@@ -56,7 +57,7 @@ export async function POST(request) {
     // IDOR Check: Ensure the patient belongs to the staff's clinic
     const { data: patientCheck } = await supabase
       .from('patients')
-      .select('id')
+      .select('id, name, phone, has_whatsapp')
       .eq('id', patientId)
       .eq('clinic_id', staff.clinic_id)
       .single();
@@ -70,6 +71,7 @@ export async function POST(request) {
       .from('appointments')
       .insert([{
         clinic_id: staff.clinic_id,
+        doctor_id: doctorId || null,
         patient_id: patientId,
         starts_at: startsAt,
         ends_at: endsAt,
@@ -84,6 +86,22 @@ export async function POST(request) {
     if (aptError) throw aptError;
 
     logger.info('admin.booking.created', { clinicId: staff.clinic_id, appointmentId: appointment.id });
+
+    // FIX: Send confirmation WhatsApp message (Item #2)
+    if (patientCheck.has_whatsapp) {
+      const appUrl = process.env.APP_URL || "https://clinicpilot.in";
+      const rescheduleLink = `${appUrl}/reschedule/${appointment.reschedule_token}`;
+      const timeString = new Date(startsAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+      
+      // We don't await this so it doesn't block the response
+      sendWhatsAppMessage(
+        patientCheck.phone, 
+        'booking_confirmation', 
+        [patientCheck.name, timeString, staff.clinics.name, rescheduleLink],
+        appointment.id,
+        staff.clinic_id
+      ).catch(err => logger.error('whatsapp.confirmation.failed_async', err));
+    }
 
     return NextResponse.json({ success: true, appointment }, { status: 200 });
   } catch (error) {

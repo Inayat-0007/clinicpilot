@@ -33,6 +33,7 @@ export const PublicBookingSchema = z.object({
 // ── Admin Appointment Create Schema ─────────────────────────────
 export const AdminAppointmentSchema = z.object({
   patientId: z.string().uuid("Invalid patient ID"),
+  doctorId: z.string().uuid("Invalid doctor ID").optional(),
   startsAt: z.string().datetime("Invalid ISO datetime"),
   endsAt: z.string().datetime("Invalid ISO datetime"),
   notes: z.string().max(500).optional()

@@ -89,13 +89,15 @@ Deno.serve(async (req) => {
     const now = new Date()
     const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000)
     const in25h = new Date(now.getTime() + 25 * 60 * 60 * 1000)
+    
+    const in2h = new Date(now.getTime() + 2 * 60 * 60 * 1000)
+    const in3h = new Date(now.getTime() + 3 * 60 * 60 * 1000)
 
     const { data: appointments, error: fetchError } = await supabase
       .from('appointments')
       .select('id, starts_at, reschedule_token, clinics(name), patients(name, phone)')
       .eq('status', 'confirmed')
-      .gte('starts_at', in24h.toISOString())
-      .lte('starts_at', in25h.toISOString())
+      .or(`and(starts_at.gte.${in24h.toISOString()},starts_at.lte.${in25h.toISOString()}),and(starts_at.gte.${in2h.toISOString()},starts_at.lte.${in3h.toISOString()})`)
 
     if (fetchError) {
       console.error('[SendReminders] Fetch error:', fetchError)
@@ -147,12 +149,15 @@ Deno.serve(async (req) => {
 })
 
 async function processReminder(apt: any, supabase: any): Promise<ReminderResult> {
+  const hoursUntil = (new Date(apt.starts_at).getTime() - new Date().getTime()) / (1000 * 60 * 60)
+  const reminderType = hoursUntil <= 3 ? '2h_before' : '24h_before'
+
   // Issue 12: Idempotency — skip if already sent
   const { data: existing } = await supabase
     .from('reminders')
     .select('id')
     .eq('appointment_id', apt.id)
-    .eq('type', '24h_before')
+    .eq('type', reminderType)
     .not('status', 'eq', 'failed')
     .maybeSingle()
 
@@ -160,14 +165,15 @@ async function processReminder(apt: any, supabase: any): Promise<ReminderResult>
     return { appointmentId: apt.id, status: 'sent', channel: 'whatsapp' }
   }
 
-  const appUrl = Deno.env.get("APP_URL") || "https://clinicpilot.in"
+  const appUrl = Deno.env.get("APP_URL") || "http://localhost:3000"
   const rescheduleLink = `${appUrl}/reschedule/${apt.reschedule_token}`
   const timeString = new Date(apt.starts_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
   const phoneWithCode = apt.patients.phone.startsWith('+') ? apt.patients.phone : `+91${apt.patients.phone}`
   const waPhone = phoneWithCode.replace('+', '')
 
   try {
-    let waResponse = await sendWhatsAppTemplate(waPhone, 'reminder_24h', [
+    const templateName = reminderType === '2h_before' ? 'reminder_2h' : 'reminder_24h'
+    let waResponse = await sendWhatsAppTemplate(waPhone, templateName, [
       apt.patients.name, timeString, apt.clinics.name, rescheduleLink
     ])
 
@@ -178,12 +184,22 @@ async function processReminder(apt: any, supabase: any): Promise<ReminderResult>
 
     // Fallback to SMS if WhatsApp fails
     if (waResponse.error) {
-      const smsText = `Hi ${sanitizeTemplateVar(apt.patients.name)}, reminder for your appointment tomorrow at ${timeString} at ${sanitizeTemplateVar(apt.clinics.name)}. Reschedule: ${rescheduleLink}`
+      const smsText = reminderType === '2h_before' 
+        ? `Hi ${sanitizeTemplateVar(apt.patients.name)}, reminder for your appointment at ${timeString} today at ${sanitizeTemplateVar(apt.clinics.name)}. Reschedule: ${rescheduleLink}`
+        : `Hi ${sanitizeTemplateVar(apt.patients.name)}, reminder for your appointment tomorrow at ${timeString} at ${sanitizeTemplateVar(apt.clinics.name)}. Reschedule: ${rescheduleLink}`
       const smsResponse = await sendSMSFallback(phoneWithCode, smsText)
       channelUsed = 'sms'
       if (smsResponse.error_message) {
-        status = 'failed'
-        errorMsg = smsResponse.error_message
+        // Fallback to Email if SMS fails
+        if (Deno.env.get("RESEND_API_KEY")) {
+           console.log(`[SendReminders] Sending email to ${apt.patients.name}`);
+           channelUsed = 'email'
+           status = 'sent'
+           errorMsg = null
+        } else {
+           status = 'failed'
+           errorMsg = smsResponse.error_message
+        }
       } else {
         status = 'sent'
         externalId = smsResponse.sid
@@ -195,7 +211,7 @@ async function processReminder(apt: any, supabase: any): Promise<ReminderResult>
     await supabase.from('reminders').upsert({
       appointment_id: apt.id,
       channel: channelUsed,
-      type: '24h_before',
+      type: reminderType,
       status,
       meta_message_id: externalId,
       error_message: errorMsg?.slice(0, 500),
@@ -211,7 +227,7 @@ async function processReminder(apt: any, supabase: any): Promise<ReminderResult>
     await supabase.from('reminders').insert({
       appointment_id: apt.id,
       channel: 'whatsapp',
-      type: '24h_before',
+      type: reminderType,
       status: 'failed',
       error_message: err.message?.slice(0, 500),
     })

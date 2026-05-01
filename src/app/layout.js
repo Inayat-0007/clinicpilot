@@ -22,6 +22,13 @@ const geistMono = Geist_Mono({
 });
 
 // ── SEO Metadata ────────────────────────────────────────────────
+export const viewport = {
+  themeColor: '#2563eb',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+};
+
 export const metadata = {
   title: {
     default: "ClinicPilot — No-Show Prevention for Clinics",
@@ -49,6 +56,11 @@ export const metadata = {
   robots: {
     index: true,
     follow: true,
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "ClinicPilot",
   },
 };
 

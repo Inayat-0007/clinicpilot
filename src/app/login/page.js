@@ -102,7 +102,7 @@ export default function LoginPage() {
               </div>
             ))}
           </div>
-          <p>Joined by 500+ top clinics across India.</p>
+          <p>Join the growing network of smart clinics.</p>
         </div>
       </div>
 
