@@ -77,28 +77,3 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
-      # ── Vercel Deployment ──────────────────────────────────────────
-      - name: Deploy to Vercel
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: --prod
-
-      # ── Smoke Test ─────────────────────────────────────────────────
-      - name: Smoke test production
-        run: |
-          DEPLOY_URL="${{ secrets.PRODUCTION_URL }}"
-          if [ -z "$DEPLOY_URL" ]; then
-            echo "⚠️ PRODUCTION_URL secret not set. Skipping smoke test."
-            exit 0
-          fi
-          echo "Waiting for deploy to propagate..."
-          sleep 15
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${DEPLOY_URL}/api/health")
-          if [ "$STATUS" != "200" ]; then
-            echo "SMOKE TEST FAILED: Health endpoint returned $STATUS"
-            exit 1
-          fi
-          echo "Smoke test passed. Production is healthy."
