@@ -15,16 +15,25 @@
 
 import crypto from "crypto";
 
-// FIX #9: Throw hard error in production if PII_SALT is missing.
-// Previously: fell back to a hardcoded default — making all hashes predictable and reversible.
-if (process.env.NODE_ENV === "production" && !process.env.PII_SALT) {
-  throw new Error(
-    "FATAL: PII_SALT is not set in production. " +
-    "All phone hashes would be predictable. Set PII_SALT in your environment."
-  );
-}
+// FIX #9: Lazy PII_SALT validation — checked at call time, not import time.
+// This prevents `next build` from crashing when the module is evaluated
+// during route collection, while still enforcing the salt in production
+// when the function is actually invoked at request time.
 
-const SALT = process.env.PII_SALT || "clinicpilot-dev-salt-not-for-production";
+/**
+ * Returns the PII salt, throwing at runtime if missing in production.
+ * @returns {string}
+ */
+function getPiiSalt() {
+  const salt = process.env.PII_SALT;
+  if (!salt && process.env.NODE_ENV === "production") {
+    throw new Error(
+      "FATAL: PII_SALT is not set in production. " +
+      "All phone hashes would be predictable. Set PII_SALT in your environment."
+    );
+  }
+  return salt || "clinicpilot-dev-salt-not-for-production";
+}
 
 /**
  * Hashes a phone number using HMAC-SHA256 with a project-specific salt.
@@ -33,6 +42,7 @@ const SALT = process.env.PII_SALT || "clinicpilot-dev-salt-not-for-production";
  * @returns {string} 64-character hex hash.
  */
 export function hashPhone(phone) {
+  const SALT = getPiiSalt();
   return crypto
     .createHmac("sha256", SALT)
     .update(String(phone))
