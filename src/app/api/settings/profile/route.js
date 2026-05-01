@@ -12,17 +12,13 @@ import { createClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
-// Allow partial updates — the frontend sends either a full profile form
-// or a single toggle field. All fields are optional.
 const ClinicProfileSchema = z.object({
-  name: z.string().min(2).max(100).optional(),
-  phone: z.string().max(20).optional().nullable(),
-  address: z.string().max(500).optional().nullable(),
-  logo_url: z.string().url().optional().nullable().or(z.literal('')),
-  brand_color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional().nullable(),
-  whatsapp_reminders_enabled: z.boolean().optional(),
-  sms_reminders_enabled: z.boolean().optional(),
-}).strip(); // strip() removes unknown keys silently instead of rejecting
+  name: z.string().min(2).max(100),
+  phone: z.string().optional(),
+  address: z.string().optional(),
+  logo_url: z.string().url().optional().or(z.literal('')),
+  brand_color: z.string().regex(/^#[0-9A-F]{6}$/i).optional()
+}).strict();
 
 export async function PATCH(request) {
   try {
@@ -35,14 +31,7 @@ export async function PATCH(request) {
     const body = await request.json();
     const validation = ClinicProfileSchema.safeParse(body);
     if (!validation.success) {
-      logger.warn('settings.profile_validation_failed', { errors: validation.error.flatten() });
       return NextResponse.json({ error: 'Invalid data', details: validation.error.flatten() }, { status: 400 });
-    }
-
-    // Ensure at least one field is being updated
-    const cleanData = validation.data;
-    if (Object.keys(cleanData).length === 0) {
-      return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
     }
 
     const { data: staff } = await supabase
@@ -57,12 +46,12 @@ export async function PATCH(request) {
 
     const { error: updateError } = await supabase
       .from('clinics')
-      .update(cleanData)
+      .update(validation.data)
       .eq('id', staff.clinic_id);
 
     if (updateError) throw updateError;
 
-    logger.info('settings.profile_updated', { clinicId: staff.clinic_id, fields: Object.keys(cleanData) });
+    logger.info('settings.profile_updated', { clinicId: staff.clinic_id });
     return NextResponse.json({ success: true });
 
   } catch (error) {
