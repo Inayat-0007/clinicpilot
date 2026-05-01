@@ -40,27 +40,20 @@ export default function RegisterPage() {
       const slug = clinicName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
       const suffix = crypto.getRandomValues(new Uint32Array(1))[0] % 100000;
       
-      const { data: clinicData, error: clinicError } = await supabase.from('clinics').insert([
-        { name: clinicName, slug: `${slug}-${suffix}` }
-      ]).select().single();
+      const { data: clinicId, error: clinicError } = await supabase.rpc('setup_clinic_workspace', {
+        p_clinic_name: clinicName,
+        p_slug: `${slug}-${suffix}`,
+        p_user_id: authData.user.id
+      });
 
       if (clinicError) {
         toast.error("Account created, but failed to setup clinic workspace.");
-      } else if (clinicData) {
-        // Create staff record as owner
-        await supabase.from('staff').insert([
-          { 
-            clinic_id: clinicData.id, 
-            user_id: authData.user.id,
-            name: "Dr. Owner",
-            role: "owner"
-          }
-        ]);
+        console.error("Workspace setup error:", clinicError);
+      } else {
+        toast.success("Account created successfully!");
+        router.push("/dashboard");
+        router.refresh();
       }
-      
-      toast.success("Account created successfully!");
-      router.push("/dashboard");
-      router.refresh();
     }
     setLoading(false);
   };

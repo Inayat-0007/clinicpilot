@@ -127,8 +127,8 @@ export function AddBookingModal({ onBookingAdded }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm">New Booking</Button>
+      <DialogTrigger render={<Button size="sm" />}>
+        New Booking
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <form onSubmit={handleSubmit}>
