@@ -3,7 +3,16 @@ CREATE EXTENSION IF NOT EXISTS pg_net;
 CREATE EXTENSION IF NOT EXISTS pg_cron;
 
 -- Unschedule just in case it exists to avoid duplicates
-SELECT cron.unschedule('send-whatsapp-reminders');
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM cron.job
+    WHERE jobname = 'send-whatsapp-reminders'
+  ) THEN
+    PERFORM cron.unschedule('send-whatsapp-reminders');
+  END IF;
+END $$;
 
 -- Schedule the send-reminders Edge Function to run every minute
 SELECT cron.schedule(
