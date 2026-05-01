@@ -1,10 +1,10 @@
-require('dotenv').config({ path: '.env.local' });
-const fs = require('fs');
 const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env.local') });
+const fs = require('fs');
 
 // Read the Edge Function source
-const indexTs = fs.readFileSync(path.join(__dirname, 'supabase/functions/send-reminders/index.ts'), 'utf8');
-const denoJson = fs.readFileSync(path.join(__dirname, 'supabase/functions/send-reminders/deno.json'), 'utf8');
+const indexTs = fs.readFileSync(path.join(__dirname, '../supabase/functions/send-reminders/index.ts'), 'utf8');
+const denoJson = fs.readFileSync(path.join(__dirname, '../supabase/functions/send-reminders/deno.json'), 'utf8');
 
 const PROJECT_REF = 'qsngudfzugvswsxftqrp';
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
