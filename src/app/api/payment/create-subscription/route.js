@@ -42,13 +42,28 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Invalid plan selected' }, { status: 400 });
     }
 
+    // Fetch the staff member's clinic_id to link the subscription
+    const { data: staff } = await supabase
+      .from('staff')
+      .select('clinic_id, role')
+      .eq('user_id', user.id)
+      .single();
+
+    if (!staff || staff.role !== 'owner') {
+      return NextResponse.json({ error: 'Only clinic owners can manage subscriptions' }, { status: 403 });
+    }
+
     const subscription = await razorpay.subscriptions.create({
       plan_id: planId,
       customer_notify: 1,
       total_count: 120,
+      notes: {
+        clinic_id: staff.clinic_id,
+        plan_type: planType
+      }
     });
 
-    logger.info('payment.subscription_created', { subscriptionId: subscription.id });
+    logger.info('payment.subscription_created', { subscriptionId: subscription.id, clinicId: staff.clinic_id });
 
     return NextResponse.json({ 
       success: true, 

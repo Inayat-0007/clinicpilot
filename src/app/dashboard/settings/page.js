@@ -167,6 +167,68 @@ export default function SettingsPage() {
     }
   };
 
+  const handleUpgrade = async (planType) => {
+    setSaving(true);
+    try {
+      // 1. Dynamically load Razorpay SDK
+      const resLoad = await new Promise((resolve) => {
+        const script = document.createElement('script');
+        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        script.onload = () => resolve(true);
+        script.onerror = () => resolve(false);
+        document.body.appendChild(script);
+      });
+
+      if (!resLoad) {
+        throw new Error('Razorpay SDK failed to load. Are you online?');
+      }
+
+      // 2. Call our secure backend API to create the subscription
+      const res = await fetch('/api/payment/create-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planType })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to initiate payment');
+
+      // 3. Open Razorpay Checkout Modal
+      const options = {
+        key: data.keyId,
+        subscription_id: data.subscriptionId,
+        name: clinic.name,
+        description: `${planType.toUpperCase()} Plan Subscription`,
+        handler: function (response) {
+          // Razorpay returns razorpay_payment_id, razorpay_subscription_id, razorpay_signature
+          // The actual activation happens securely via the backend webhook!
+          // We just show a success message here.
+          toast.success("Payment successful! Your plan is being activated.");
+          fetchSettings(); // Refresh data
+        },
+        prefill: {
+          name: clinic.name,
+          email: clinic.email || '',
+          contact: clinic.phone || ''
+        },
+        theme: {
+          color: clinic.brand_color || '#2563eb'
+        }
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.on('payment.failed', function (response){
+        toast.error(`Payment failed: ${response.error.description}`);
+      });
+      rzp.open();
+
+    } catch (error) {
+      toast.error(error.message || "Failed to start upgrade process");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
   if (loading) {
@@ -439,15 +501,18 @@ export default function SettingsPage() {
               {clinic && (
                 <div className="space-y-4">
                   <div className="p-4 border rounded-md bg-muted/20">
-                    <h3 className="font-semibold text-lg capitalize">{clinic.subscription_plan} Plan</h3>
-                    <p className="text-sm text-muted-foreground">Status: <span className="font-medium capitalize">{clinic.subscription_status}</span></p>
-                    {clinic.subscription_status === 'active' && clinic.subscription_plan === 'trial' && (
+                    <h3 className="font-semibold text-lg capitalize">{clinic.subscription_plan || 'trial'} Plan</h3>
+                    <p className="text-sm text-muted-foreground">Status: <span className="font-medium capitalize">{clinic.subscription_status || 'active'}</span></p>
+                    {clinic.subscription_status === 'active' && clinic.subscription_plan === 'trial' && clinic.trial_ends_at && (
                       <p className="text-sm text-amber-600 mt-2 font-medium">Your trial ends on {new Date(clinic.trial_ends_at).toLocaleDateString()}</p>
                     )}
                   </div>
-                  <div>
-                    <Button variant="default">Upgrade Plan</Button>
-                    <Button variant="outline" className="ml-2">Manage Billing Portal</Button>
+                  <div className="flex gap-4">
+                    <div className="flex gap-2">
+                      <Button variant="default" onClick={() => handleUpgrade('starter')} disabled={saving}>Upgrade to Starter</Button>
+                      <Button variant="default" onClick={() => handleUpgrade('growth')} disabled={saving}>Upgrade to Growth</Button>
+                    </div>
+                    <Button variant="outline">Manage Billing Portal</Button>
                   </div>
                 </div>
               )}
